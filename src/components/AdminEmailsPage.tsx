@@ -409,7 +409,7 @@ export function AdminEmailsPage() {
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-3 pt-2">
               <button
                 type="submit"
-                disabled={sendingTask || (taskAudience === "verified" ? verifiedCount === 0 : students.length === 0)}
+                disabled={sendingTask}
                 className="w-full sm:w-auto h-11 px-6 inline-flex items-center justify-center gap-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 rounded-[6px] shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {sendingTask ? (
@@ -565,12 +565,7 @@ export function AdminEmailsPage() {
             <div className="flex justify-end pt-2">
               <button
                 type="submit"
-                disabled={
-                  sendingNotice ||
-                  !noticeSubject.trim() ||
-                  !noticeMessage.trim() ||
-                  (noticeAudience === "verified" ? verifiedCount === 0 : students.length === 0)
-                }
+                disabled={sendingNotice}
                 className="h-10 px-6 inline-flex items-center gap-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 rounded-[6px] shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {sendingNotice ? (

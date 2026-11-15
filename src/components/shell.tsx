@@ -206,19 +206,19 @@ export function Workspace({
   const router = useRouter();
   const [menu, setMenu] = useState(false);
   const [rulesOpen, setRulesOpen] = useState(false);
-  const profile =
-    data.profile ||
-    (admin
-      ? {
-          id: "e743c52b-3669-452b-8101-d54810015b5a",
-          email: "admin@vspark.edu",
-          full_name: "Faculty Admin",
-          role: "admin",
-          status: "approved",
-          payment_receipt_url: null,
-          created_at: new Date().toISOString(),
-        }
-      : null);
+  const profile = admin
+    ? (data.profile?.role === "admin"
+        ? data.profile
+        : {
+            id: "e743c52b-3669-452b-8101-d54810015b5a",
+            email: "admin@vspark.edu",
+            full_name: "Faculty Admin",
+            role: "admin",
+            status: "approved",
+            payment_receipt_url: null,
+            created_at: new Date().toISOString(),
+          })
+    : (data.profile?.role === "student" ? data.profile : null);
   const config = extractConfigFromDescription(data?.settings?.task_description);
   const allowed = demo || (admin ? true : !!profile);
   useEffect(() => {
@@ -402,7 +402,7 @@ export function Workspace({
                 className="side-link"
                 onClick={async () => {
                   try {
-                    await logout();
+                    await logout(admin);
                     router.push(admin ? "/admin/login" : "/login");
                   } catch (e) {
                     alert((e as Error).message);

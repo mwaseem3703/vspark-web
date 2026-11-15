@@ -14,6 +14,7 @@ import { Workspace, PageHeading } from "./shell";
 import { CompetitionRulesModal } from "./CompetitionRulesModal";
 import RichTextEditor from "./RichTextEditor";
 import { useApp } from "./provider";
+import { FigmaSuccessModal } from "./ScallopedBadge";
 
 const DEFAULT_CHECKLIST_TEXT = `Registration, login, logout, and protected routes work.
 Database is connected and full CRUD works.
@@ -33,6 +34,15 @@ export function AdminRulesPage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [successModal, setSuccessModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+  });
 
   const [guidelinesInfo, setGuidelinesInfo] = useState({
     allowedTechStack: "Next.js 15/16, React 19, Tailwind CSS, TypeScript / JavaScript, Supabase / PostgreSQL, Node.js, Vercel",
@@ -140,6 +150,11 @@ Total: 100 Marks`,
       setMessage({
         text: "Competition Guidelines, Evaluation Rubric & Popup Checklist saved successfully.",
         type: "success",
+      });
+      setSuccessModal({
+        isOpen: true,
+        title: "Rules & Guidelines Saved!",
+        message: "Frameworks, evaluation rubric, and popup checklist have been updated across the platform.",
       });
       notify("Rules & Evaluation Rubric saved successfully.");
       await refresh();
@@ -361,6 +376,12 @@ Total: 100 Marks`,
         allowedTechStack={guidelinesInfo.allowedTechStack}
         guidelines={guidelinesInfo.competitionGuidelines}
         checklist={checklistArray}
+      />
+      <FigmaSuccessModal
+        isOpen={successModal.isOpen}
+        onClose={() => setSuccessModal((prev) => ({ ...prev, isOpen: false }))}
+        title={successModal.title}
+        message={successModal.message}
       />
     </Workspace>
   );

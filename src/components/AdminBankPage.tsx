@@ -4,12 +4,22 @@ import { useEffect, useState } from "react";
 import { CreditCard, Save, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import { Workspace, PageHeading } from "./shell";
 import { useApp } from "./provider";
+import { FigmaSuccessModal } from "./ScallopedBadge";
 
 export function AdminBankPage() {
   const { data, refresh, notify } = useApp();
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [message, setMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [successModal, setSuccessModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+  });
 
   const [bankInfo, setBankInfo] = useState({
     accountTitle: "COMSATS Web Society",
@@ -55,6 +65,11 @@ export function AdminBankPage() {
       setMessage({
         text: "Registration Fee & Banking Deposit Details updated successfully.",
         type: "success",
+      });
+      setSuccessModal({
+        isOpen: true,
+        title: "Bank Details Updated!",
+        message: "Registration fee and deposit accounts have been saved and updated for all student registrations.",
       });
       notify("Registration Fee & Banking Deposit Details updated.");
       await refresh();
@@ -222,6 +237,12 @@ export function AdminBankPage() {
           </button>
         </div>
       </form>
+      <FigmaSuccessModal
+        isOpen={successModal.isOpen}
+        onClose={() => setSuccessModal((prev) => ({ ...prev, isOpen: false }))}
+        title={successModal.title}
+        message={successModal.message}
+      />
     </Workspace>
   );
 }

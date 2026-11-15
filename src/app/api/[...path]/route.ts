@@ -22,6 +22,7 @@ import {
   sendPasswordResetEmail,
   sendPodiumWinnerEmail,
   sendResultsGeneralEmail,
+  sendResubmissionUnlockedEmail,
 } from "@/lib/mail";
 import {
   extractConfigFromDescription,
@@ -122,26 +123,30 @@ function checkOrigin(req: NextRequest) {
 async function profile(required = true, req?: NextRequest) {
   const referer = req?.headers.get("referer") || "";
   const scope = req?.nextUrl.searchParams.get("scope") || "";
-  const isAdminScope = referer.includes("/admin") || scope === "admin";
-  const isStudentScope = referer.includes("/dashboard") || scope === "student";
+  const scopeHeader = req?.headers.get("x-portal-scope") || "";
+  const isAdminScope = referer.includes("/admin") || scope === "admin" || scopeHeader === "admin";
 
   const store = await cookies();
   const hasAdminCookie = store.get("admin_session")?.value === "true";
 
-  // If in admin area, prioritize admin session
-  if (isAdminScope && hasAdminCookie) {
-    return {
-      id: "e743c52b-3669-452b-8101-d54810015b5a",
-      email: process.env.ADMIN_EMAIL || "aliblogspot769@gmail.com",
-      full_name: "Faculty Admin",
-      role: "admin",
-      status: "approved",
-      payment_receipt_url: null,
-      created_at: new Date().toISOString(),
-    } as Profile;
+  // 1. Dedicated Admin Scope (isolated to /admin routes)
+  if (isAdminScope) {
+    if (hasAdminCookie) {
+      return {
+        id: "e743c52b-3669-452b-8101-d54810015b5a",
+        email: process.env.ADMIN_EMAIL || "aliblogspot769@gmail.com",
+        full_name: "Faculty Admin",
+        role: "admin",
+        status: "approved",
+        payment_receipt_url: null,
+        created_at: new Date().toISOString(),
+      } as Profile;
+    }
+    if (required) throw new ApiError("Administrator access required.", 403);
+    return null;
   }
 
-  // Check Supabase student user
+  // 2. Student & Public Scope: strictly authenticate the student user session
   const client = await serverClient();
   const {
     data: { user },
@@ -158,8 +163,8 @@ async function profile(required = true, req?: NextRequest) {
     if (p) return p;
   }
 
-  // Fallback to admin if cookie exists and not specifically student scope
-  if (hasAdminCookie && !isStudentScope) {
+  // 3. Fallback: if no student user is logged in, but admin cookie exists, return admin context
+  if (!user && hasAdminCookie) {
     return {
       id: "e743c52b-3669-452b-8101-d54810015b5a",
       email: process.env.ADMIN_EMAIL || "aliblogspot769@gmail.com",
@@ -610,27 +615,40 @@ async function post(req: NextRequest, path: string) {
       });
     let notice =
       "Registration received. Check your inbox to confirm your email, if requested.";
-    if (receipt) {
+    let receiptPath: string | null = null;
+    if (receipt && data.user) {
       const ext =
         receipt.type === "application/pdf"
           ? "pdf"
           : receipt.type === "image/png"
             ? "png"
             : "jpg";
-      const path = `${data.user.id}/${crypto.randomUUID()}.${ext}`;
+      receiptPath = `${data.user.id}/${crypto.randomUUID()}.${ext}`;
       const uploaded = await db.storage
         .from("receipts")
-        .upload(path, receipt, { contentType: receipt.type, upsert: false });
-      if (!uploaded.error) {
-        const updated = await db
-          .from("profiles")
-          .update({ payment_receipt_url: path })
-          .eq("id", data.user.id);
-        if (updated.error)
-          notice += " Your deposit receipt could not be attached.";
-      } else
+        .upload(receiptPath, receipt, { contentType: receipt.type, upsert: true });
+      if (uploaded.error) {
         notice +=
           " Your account was created, but the deposit receipt upload failed. Contact an organizer.";
+        receiptPath = null;
+      }
+    }
+
+    if (data.user) {
+      // Guarantee student profile row is created in public.profiles table
+      await db.from("profiles").upsert(
+        {
+          id: data.user.id,
+          full_name: input.full_name,
+          email: input.email.trim().toLowerCase(),
+          phone_no: input.phone_no,
+          university_name: input.university_name,
+          role: "student",
+          status: "pending",
+          payment_receipt_url: receiptPath,
+        },
+        { onConflict: "id" },
+      );
     }
     const mail = await sendEmail(
       input.email,
@@ -706,17 +724,6 @@ async function post(req: NextRequest, path: string) {
       throw new ApiError("Invalid administrator credentials. Access denied.", 401);
     }
 
-    // Also sign in to Supabase auth so serverClient has active admin context
-    const client = await serverClient();
-    try {
-      await client.auth.signInWithPassword({
-        email: input.email.trim(),
-        password: input.password,
-      });
-    } catch (authErr) {
-      console.warn("Supabase auth sync notice:", authErr);
-    }
-
     const response = NextResponse.json({ ok: true, redirect: "/admin" });
     response.cookies.set("admin_session", "true", {
       httpOnly: true,
@@ -733,20 +740,31 @@ async function post(req: NextRequest, path: string) {
       throw new ApiError("Please provide a valid registered email address.", 400);
     }
     const trimmedEmail = email.trim().toLowerCase();
+    let studentName = "Participant";
+
     const { data: userProfile } = await db
       .from("profiles")
       .select("id, full_name, email")
       .ilike("email", trimmedEmail)
       .maybeSingle();
 
-    if (!userProfile) {
-      return json(
-        {
-          notFound: true,
-          error: "Email not found. No account is registered with this email address.",
-        },
-        404,
+    if (userProfile) {
+      studentName = userProfile.full_name || "Participant";
+    } else {
+      const { data: authList } = await db.auth.admin.listUsers();
+      const match = authList?.users?.find(
+        (u) => u.email?.trim().toLowerCase() === trimmedEmail,
       );
+      if (!match) {
+        return json(
+          {
+            notFound: true,
+            error: "Email not found. No account is registered with this email address.",
+          },
+          404,
+        );
+      }
+      studentName = (match.user_metadata?.full_name as string) || "Participant";
     }
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin;
@@ -754,7 +772,7 @@ async function post(req: NextRequest, path: string) {
 
     const sent = await sendPasswordResetEmail({
       to: trimmedEmail,
-      studentName: userProfile.full_name || "Participant",
+      studentName,
       resetUrl,
     });
 
@@ -779,11 +797,20 @@ async function post(req: NextRequest, path: string) {
       .ilike("email", trimmedEmail)
       .maybeSingle();
 
-    if (!userProfile) {
+    let userId = userProfile?.id;
+    if (!userId) {
+      const { data: authList } = await db.auth.admin.listUsers();
+      const match = authList?.users?.find(
+        (u) => u.email?.trim().toLowerCase() === trimmedEmail,
+      );
+      if (match) userId = match.id;
+    }
+
+    if (!userId) {
       return json({ notFound: true, error: "Email not found." }, 404);
     }
 
-    const { error: updateErr } = await db.auth.admin.updateUserById(userProfile.id, {
+    const { error: updateErr } = await db.auth.admin.updateUserById(userId, {
       password,
     });
 
@@ -826,13 +853,7 @@ async function post(req: NextRequest, path: string) {
     }
     return json({ success: true, message: "Password updated successfully." });
   }
-  if (path === "auth/logout" || path === "auth/admin-logout") {
-    try {
-      const client = await serverClient();
-      await client.auth.signOut();
-    } catch {
-      // ignore
-    }
+  if (path === "auth/admin-logout") {
     const response = NextResponse.json({ ok: true });
     response.cookies.set("admin_session", "", {
       httpOnly: true,
@@ -842,6 +863,15 @@ async function post(req: NextRequest, path: string) {
       maxAge: 0,
     });
     return response;
+  }
+  if (path === "auth/logout") {
+    try {
+      const client = await serverClient();
+      await client.auth.signOut();
+    } catch {
+      // ignore
+    }
+    return NextResponse.json({ ok: true });
   }
   if (path === "admin/students") {
     await admin();
@@ -874,6 +904,25 @@ async function post(req: NextRequest, path: string) {
       if (unlock) {
         config.unlockedSubmissions[studentId] = true;
         await db.from("submissions").delete().eq("profile_id", studentId);
+        // Send email alert to student informing them that resubmission is allowed
+        (async () => {
+          try {
+            const { data: st } = await db
+              .from("profiles")
+              .select("full_name, email")
+              .eq("id", studentId)
+              .maybeSingle();
+            if (st?.email) {
+              await sendResubmissionUnlockedEmail({
+                to: st.email,
+                studentName: st.full_name || "Participant",
+                competitionTitle: s.title,
+              });
+            }
+          } catch (e) {
+            console.error("Failed to send unlock email:", e);
+          }
+        })();
       } else {
         delete config.unlockedSubmissions[studentId];
       }
@@ -896,6 +945,25 @@ async function post(req: NextRequest, path: string) {
       config.unlockedSubmissions[studentId] = true;
       const newDesc = embedConfigInDescription(s.task_description, config);
       await db.from("competition_settings").update({ task_description: newDesc }).eq("id", 1);
+      // Send email alert to student informing them that resubmission is allowed
+      (async () => {
+        try {
+          const { data: st } = await db
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", studentId)
+            .maybeSingle();
+          if (st?.email) {
+            await sendResubmissionUnlockedEmail({
+              to: st.email,
+              studentName: st.full_name || "Participant",
+              competitionTitle: s.title,
+            });
+          }
+        } catch (e) {
+          console.error("Failed to send unlock email:", e);
+        }
+      })();
       return json({ ok: true, notice: "Student workspace unlocked for resubmission." });
     }
 
@@ -1066,7 +1134,7 @@ async function post(req: NextRequest, path: string) {
 
     return json({ success: true, email: String(to).trim() });
   }
-  if (path === "admin/send-password-reset") {
+  if (path === "admin/send-password-reset" || path === "admin/send-reset-email") {
     await admin();
     const { studentId, email, studentName } = await req.json();
     if (!email || typeof email !== "string" || !email.includes("@")) {

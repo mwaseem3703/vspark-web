@@ -7,7 +7,7 @@ function getSiteUrl() {
   return (
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
-    "https://vspark-competition.vercel.app"
+    "https://vspark-web.vercel.app"
   ).replace(/\/+$/, "");
 }
 
@@ -222,6 +222,39 @@ export async function sendDirectStudentEmail({
     heading: subject,
     actionLabel: "Open Student Dashboard",
     actionUrl: `${siteUrl}/dashboard`,
+  });
+}
+
+/**
+ * Send Workspace Unlocked / Resubmission Notification to a Student
+ */
+export async function sendResubmissionUnlockedEmail({
+  to,
+  studentName,
+  competitionTitle,
+}: {
+  to: string;
+  studentName?: string;
+  competitionTitle?: string;
+}) {
+  const siteUrl = getSiteUrl();
+  const name = studentName || "Participant";
+  const comp = competitionTitle || "VSpark 2026 Web Development Competition";
+  const subject = `Workspace Unlocked: Resubmission Permitted - ${comp}`;
+
+  const message = `Hello ${name},
+
+The competition organizers have unlocked your submission workspace.
+
+You have now been granted permission to re-upload your project files and update your GitHub repository URL.
+
+Please visit your workspace promptly to complete your updated submission.`;
+
+  return await sendEmail(to, subject, message, {
+    heading: "Workspace Unlocked for Resubmission",
+    actionLabel: "Open Submission Workspace",
+    actionUrl: `${siteUrl}/task`,
+    preheader: "Your project workspace has been unlocked by organizers.",
   });
 }
 

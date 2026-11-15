@@ -344,7 +344,12 @@ export function TaskPage() {
   const endMs = Date.parse(s.end_time) || startMs + durationMs;
   const remainingSecs = Math.max(0, Math.floor((endMs - (now || Date.now())) / 1000));
   const isTimeExpired = remainingSecs <= 0 && s.submission_mode !== "open";
-  const isUnlockedByAdmin = submission?.unlocked || false;
+  const config = extractConfigFromDescription(s.task_description);
+  const isUnlockedByAdmin = Boolean(
+    submission?.unlocked ||
+    config.unlockedSubmissions?.[data.profile?.id || ""] ||
+    config.allowAllResubmissions
+  );
 
   const [files, setFiles] = useState<File[]>([]);
   const [excluded, setExcluded] = useState(0);
@@ -355,6 +360,7 @@ export function TaskPage() {
   const [error, setError] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [done, setDone] = useState(false);
+  const [editMode, setEditMode] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
 
   // Confirmation Modal and Evaluator Collaborator State
@@ -362,7 +368,6 @@ export function TaskPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [hasConfirmedRules, setHasConfirmedRules] = useState(false);
   const [copiedEvaluatorEmail, setCopiedEvaluatorEmail] = useState(false);
-  const config = extractConfigFromDescription(s.task_description);
   const EVALUATOR_GITHUB_EMAIL = config.evaluatorEmail || "aliblogspot769@gmail.com";
 
   function selectFiles(list: FileList | null) {
@@ -496,8 +501,32 @@ export function TaskPage() {
         action={<StatusBadge status={state === "open" && !isFrozen ? "open" : "closed"} />}
       />
 
+      {/* UNLOCKED FOR RESUBMISSION BANNER */}
+      {isUnlockedByAdmin && (
+        <div className="p-4 mb-6 rounded-[2px] bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/80 flex items-start gap-3 text-emerald-900 dark:text-emerald-200 shadow-xs animate-in fade-in">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+          <div className="flex-1">
+            <strong className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+              Workspace Unlocked for Resubmission
+            </strong>
+            <p className="text-xs mt-1 text-emerald-700 dark:text-emerald-300 leading-relaxed">
+              The competition organizers have unlocked your workspace. You have been granted permission to update your GitHub repository and re-upload your project files.
+            </p>
+          </div>
+          {editMode && (
+            <button
+              type="button"
+              onClick={() => setEditMode(false)}
+              className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline px-2 py-1 cursor-pointer"
+            >
+              Cancel Edit
+            </button>
+          )}
+        </div>
+      )}
+
       {/* AUTO-FREEZE ALERT WHEN TIME EXPIRED */}
-      {isFrozen && !submission && (
+      {isFrozen && !submission && !isUnlockedByAdmin && (
         <div className="p-4 mb-6 rounded-[2px] bg-red-50 border border-red-200 flex items-start gap-3 text-red-900 shadow-sm animate-in fade-in">
           <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
           <div>
@@ -511,7 +540,7 @@ export function TaskPage() {
         </div>
       )}
 
-      {submission || done ? (
+      {!editMode && (submission || done) ? (
         <section className="card submission-success">
           <span className="success-icon">
             <CircleCheck size={37} />
@@ -559,11 +588,22 @@ export function TaskPage() {
             </>
           )}
 
-          <Button asChild variant="outline">
-            <Link href="/results">
-              View leaderboard <ArrowUpRight size={16} />
-            </Link>
-          </Button>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Button asChild variant="outline">
+              <Link href="/results">
+                View leaderboard <ArrowUpRight size={16} />
+              </Link>
+            </Button>
+            {isUnlockedByAdmin && (
+              <Button
+                type="button"
+                onClick={() => setEditMode(true)}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer"
+              >
+                <RefreshCw size={14} /> Re-upload / Update Submission
+              </Button>
+            )}
+          </div>
         </section>
       ) : isFrozen ? (
         <section className="card">

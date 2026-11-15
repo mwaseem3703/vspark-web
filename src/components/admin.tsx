@@ -33,6 +33,7 @@ import {
   Mail,
   KeyRound,
   Download,
+  Award,
 } from "lucide-react";
 import { useApp, request } from "./provider";
 import { Workspace, PageHeading, StatusBadge, EmptyState } from "./shell";
@@ -1348,6 +1349,16 @@ export function EvaluationsPage() {
   const lastTrigger = useRef<HTMLElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [sendingResults, setSendingResults] = useState(false);
+  const [resultsModal, setResultsModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+  });
   const [rubricScores, setRubricScores] = useState<Record<string, number>>({
     ui_ux: 0,
     auth: 0,
@@ -1359,6 +1370,37 @@ export function EvaluationsPage() {
     docs: 0,
     defense: 0,
   });
+
+  const handleSendResults = async () => {
+    if (!data.settings.results_published) {
+      notify("Please turn ON 'Publish results' in Competition Settings first.");
+      return;
+    }
+    const confirmed = window.confirm(
+      "Dispatch official Results & Leaderboard emails to all participants?\n\nThis will send custom podium champion emails to the Top 3 winners and general results notification to all other participants."
+    );
+    if (!confirmed) return;
+
+    setSendingResults(true);
+    try {
+      const res = await fetch("/api/admin/send-results-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      const resData = await res.json();
+      if (!res.ok) throw new Error(resData.error || "Failed to dispatch results email.");
+      setResultsModal({
+        isOpen: true,
+        title: "Results Dispatched Successfully!",
+        message: "Final scores and winner congratulations have been emailed to participants.",
+      });
+      notify("Results emails dispatched.");
+    } catch (err) {
+      notify((err as Error).message);
+    } finally {
+      setSendingResults(false);
+    }
+  };
 
   const handleOpenEvaluation = (s: Submission, el: HTMLElement) => {
     lastTrigger.current = el;
@@ -1503,12 +1545,32 @@ export function EvaluationsPage() {
         title="Ideas, ready for the spotlight."
         description="Review each project, share feedback, and recognize the work behind it."
         action={
-          <Button asChild variant="outline">
-            <Link href="/admin/settings">
-              <Trophy size={16} />
-              Publish results
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              disabled={sendingResults || !data.settings.results_published}
+              onClick={handleSendResults}
+              className={`h-9 px-4 inline-flex items-center gap-2 text-xs font-bold rounded-[2px] shadow-xs cursor-pointer ${
+                data.settings.results_published
+                  ? "bg-amber-600 hover:bg-amber-700 text-white"
+                  : "bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed"
+              }`}
+              title={
+                data.settings.results_published
+                  ? "Email results and leaderboard links to all participants"
+                  : "Publish results in Settings first to enable results emailing"
+              }
+            >
+              {sendingResults ? <RefreshCw size={14} className="animate-spin" /> : <Award size={14} />}
+              <span>{sendingResults ? "Sending..." : "Send Results Email"}</span>
+            </Button>
+            <Button asChild variant="outline" className="h-9 text-xs">
+              <Link href="/admin/settings">
+                <Trophy size={14} />
+                {data.settings.results_published ? "Results Published" : "Publish Results"}
+              </Link>
+            </Button>
+          </div>
         }
       />
       <section className="card">
@@ -1839,6 +1901,12 @@ export function EvaluationsPage() {
           </section>
         </div>
       )}
+      <FigmaSuccessModal
+        isOpen={resultsModal.isOpen}
+        onClose={() => setResultsModal((prev) => ({ ...prev, isOpen: false }))}
+        title={resultsModal.title}
+        message={resultsModal.message}
+      />
     </Workspace>
   );
 }
@@ -1850,6 +1918,7 @@ function localTime(iso: string) {
 }
 export function SettingsPage() {
   const { data, demo, update, refresh, notify } = useApp();
+  const formRef = useRef<HTMLFormElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [filename, setFilename] = useState("");
@@ -1861,6 +1930,16 @@ export function SettingsPage() {
   const [checkingDrive, setCheckingDrive] = useState(false);
   const [driveCheck, setDriveCheck] = useState("");
   const [connectingDrive, setConnectingDrive] = useState(false);
+  const [successModal, setSuccessModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+  }>({
+    isOpen: false,
+    title: "",
+    message: "",
+  });
+
   useEffect(() => {
     const url = new URL(window.location.href);
     const state = url.searchParams.get("drive");
@@ -1878,6 +1957,7 @@ export function SettingsPage() {
     url.searchParams.delete("drive");
     window.history.replaceState(null, "", url.pathname + url.search);
   }, [notify]);
+
   async function connectDrive() {
     setConnectingDrive(true);
     setDriveCheck("");
@@ -1893,9 +1973,11 @@ export function SettingsPage() {
       setConnectingDrive(false);
     }
   }
+
   const driveChanged =
     driveUrl.trim() !== (data.settings.google_drive_folder_url || "");
   const currentConfig = extractConfigFromDescription(data.settings.task_description);
+
   useEffect(() => {
     setMode(data.settings.submission_mode);
     setPublished(data.settings.results_published);
@@ -1905,6 +1987,7 @@ export function SettingsPage() {
     data.settings.results_published,
     data.settings.google_drive_folder_url,
   ]);
+
   async function checkDrive() {
     setCheckingDrive(true);
     setDriveCheck("");
@@ -1931,6 +2014,7 @@ export function SettingsPage() {
       setCheckingDrive(false);
     }
   }
+
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -1941,13 +2025,13 @@ export function SettingsPage() {
       const end = new Date(String(form.get("end_time"))).toISOString();
       if (Date.parse(end) <= Date.parse(start))
         throw new Error("The end time must be after the start time.");
-      const evalEmail = String(form.get("evaluator_email") || "").trim();
+
       let updatedTaskDesc = String(form.get("task_description")).trim();
-      if (evalEmail) {
-        const cfg = extractConfigFromDescription(updatedTaskDesc);
-        cfg.evaluatorEmail = evalEmail;
-        updatedTaskDesc = embedConfigInDescription(updatedTaskDesc, cfg);
-      }
+      const existingCfg = extractConfigFromDescription(data.settings.task_description);
+      const newCfg = extractConfigFromDescription(updatedTaskDesc);
+      const mergedCfg = { ...existingCfg, ...newCfg };
+      updatedTaskDesc = embedConfigInDescription(updatedTaskDesc, mergedCfg);
+
       const next: Settings = {
         ...data.settings,
         title: String(form.get("title")).trim(),
@@ -1957,10 +2041,10 @@ export function SettingsPage() {
         submission_mode: mode,
         results_published: published,
         event_location: String(form.get("event_location")).trim(),
-        bank_name: String(form.get("bank_name")).trim(),
-        bank_title: String(form.get("bank_title")).trim(),
-        bank_account: String(form.get("bank_account")).trim(),
-        bank_iban: String(form.get("bank_iban")).trim(),
+        bank_name: data.settings.bank_name || "Easypaisa / HBL",
+        bank_title: data.settings.bank_title || "COMSATS Web Society",
+        bank_account: data.settings.bank_account || "0123 4567 8901 23",
+        bank_iban: data.settings.bank_iban || "PK00HBLB01234567890123",
         google_drive_folder_url: driveUrl.trim()
           ? canonicalDriveFolder(driveUrl)
           : (data.settings.google_drive_folder_url || ""),
@@ -1970,13 +2054,21 @@ export function SettingsPage() {
           String(form.get("prize_3")),
         ],
       };
+
       if (demo) update((d) => ({ ...d, settings: next }));
       else {
         form.set("settings", JSON.stringify(next));
-        form.set("evaluator_email", evalEmail);
         await request("admin/settings", { method: "POST", body: form });
         await refresh();
       }
+
+      setSuccessModal({
+        isOpen: true,
+        title: "Competition Settings Saved!",
+        message: demo && filename
+          ? "Demo settings saved successfully. The PDF was not uploaded."
+          : "Competition settings, timeline, and rules updated successfully.",
+      });
       notify(
         demo && filename
           ? "Demo settings saved. The PDF was not uploaded."
@@ -1988,14 +2080,26 @@ export function SettingsPage() {
       setBusy(false);
     }
   }
+
   return (
     <Workspace admin>
       <PageHeading
         eyebrow="YOU SET THE STAGE"
         title="Make it your competition."
         description="Shape the challenge, set the timing, and decide when the spotlight turns on."
+        action={
+          <Button
+            type="button"
+            onClick={() => formRef.current?.requestSubmit()}
+            disabled={busy}
+            className="h-9 px-4 inline-flex items-center gap-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-[2px] shadow-xs cursor-pointer"
+          >
+            {busy ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
+            <span>{busy ? "Saving..." : "Save Settings"}</span>
+          </Button>
+        }
       />
-      <form className="settings-layout" onSubmit={save}>
+      <form ref={formRef} className="settings-layout" onSubmit={save}>
         <div className="settings-main">
           <section className="card settings-card">
             <div className="settings-section-title">
@@ -2129,79 +2233,6 @@ export function SettingsPage() {
               ))}
             </div>
           </section>
-          <section className="card settings-card">
-            <div className="settings-section-title">
-              <span className="stat-icon mint">
-                <ClipboardCheck size={20} />
-              </span>
-              <div>
-                <h3>Optional payment details</h3>
-                <p>
-                  Published on the landing page when an account number is
-                  provided.
-                </p>
-              </div>
-            </div>
-            <div className="form-grid">
-              <label>
-                Bank name
-                <input
-                  name="bank_name"
-                  maxLength={100}
-                  defaultValue={data.settings.bank_name}
-                />
-              </label>
-              <label>
-                Account title
-                <input
-                  name="bank_title"
-                  maxLength={150}
-                  defaultValue={data.settings.bank_title}
-                />
-              </label>
-              <label>
-                Account number
-                <input
-                  name="bank_account"
-                  maxLength={80}
-                  defaultValue={data.settings.bank_account}
-                />
-              </label>
-              <label>
-                IBAN
-                <input
-                  name="bank_iban"
-                  maxLength={80}
-                  defaultValue={data.settings.bank_iban}
-                />
-              </label>
-            </div>
-          </section>
-          <section className="card settings-card">
-            <div className="settings-section-title">
-              <span className="stat-icon violet">
-                <Mail size={20} />
-              </span>
-              <div>
-                <h3>Faculty Evaluator Access</h3>
-                <p>Repository collaborator &amp; evaluation access email provided to participants.</p>
-              </div>
-            </div>
-            <div className="form-stack">
-              <label>
-                Evaluator Collaborator Email
-                <input
-                  type="email"
-                  name="evaluator_email"
-                  defaultValue={currentConfig.evaluatorEmail || "aliblogspot769@gmail.com"}
-                  placeholder="faculty@university.edu"
-                />
-              </label>
-              <p className="control-explanation">
-                Participants will see this email when prompted to invite faculty evaluators to their private GitHub repositories during project submission.
-              </p>
-            </div>
-          </section>
         </div>
         <aside className="settings-controls">
           <section className="card settings-card">
@@ -2222,18 +2253,11 @@ export function SettingsPage() {
                 <option value="closed">Closed</option>
               </select>
             </label>
-            <p className="control-explanation">
-              {mode === "scheduled"
-                ? "The portal opens and closes automatically using your event schedule."
-                : mode === "open"
-                  ? "The portal stays open, regardless of the schedule."
-                  : "The portal is closed. This overrides the schedule."}
-            </p>
             <div className="control-divider" />
             <div className="toggle-row">
               <div>
                 <strong>Publish results</strong>
-                <span>Reveal the public leaderboard</span>
+                <span>Reveal public leaderboard</span>
               </div>
               <button
                 type="button"
@@ -2246,23 +2270,12 @@ export function SettingsPage() {
                 <span />
               </button>
             </div>
-            <p className="control-explanation">
-              Only evaluated projects appear in published results. Names,
-              universities, and scores become public.
-            </p>
-            <div className="info-note">
-              <Info size={17} />
-              <p>
-                Changes take effect when you save. Closing submissions
-                immediately locks the task page.
-              </p>
-            </div>
             {error && (
               <p className="error-message" role="alert">
                 {error}
               </p>
             )}
-            <Button type="submit" disabled={busy}>
+            <Button type="submit" disabled={busy} className="h-10 text-xs font-bold w-full mt-2">
               <Save size={16} />
               {busy ? "Saving changes…" : "Save changes"}
             </Button>
@@ -2270,12 +2283,14 @@ export function SettingsPage() {
               Preview leaderboard <ArrowUpRight size={13} />
             </Link>
           </section>
-          <p className="settings-save-note">
-            <Check size={13} />
-            You’re in control. Make it a great experience.
-          </p>
         </aside>
       </form>
+      <FigmaSuccessModal
+        isOpen={successModal.isOpen}
+        onClose={() => setSuccessModal((prev) => ({ ...prev, isOpen: false }))}
+        title={successModal.title}
+        message={successModal.message}
+      />
     </Workspace>
   );
 }

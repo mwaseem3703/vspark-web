@@ -20,17 +20,21 @@ type AppContext = {
   update: (fn: (d: AppData) => AppData) => void;
   demoLogin: (role: "student" | "admin") => void;
   resetDemo: () => void;
-  logout: () => Promise<void>;
+  logout: (isAdmin?: boolean) => Promise<void>;
 };
 const Context = createContext<AppContext | null>(null);
 const KEY = "vspark-demo-v1";
 export async function request(path: string, options: RequestInit = {}) {
+  const isAdmin =
+    typeof window !== "undefined" && window.location.pathname.startsWith("/admin");
+  const baseHeaders: Record<string, string> = {};
+  if (isAdmin) baseHeaders["x-portal-scope"] = "admin";
+  if (!(options.body instanceof FormData))
+    baseHeaders["Content-Type"] = "application/json";
+
   const response = await fetch(`/api/${path}`, {
     ...options,
-    headers:
-      options.body instanceof FormData
-        ? options.headers
-        : { "Content-Type": "application/json", ...options.headers },
+    headers: { ...baseHeaders, ...options.headers },
   });
   const payload = await response.json();
   if (!response.ok)
@@ -127,8 +131,8 @@ export function Provider({
                 demoStudent),
             } as Profile),
     }));
-  const logout = async () => {
-    if (!demo) await request("auth/logout", { method: "POST" });
+  const logout = async (isAdmin?: boolean) => {
+    if (!demo) await request(isAdmin ? "auth/admin-logout" : "auth/logout", { method: "POST" });
     update((d) => ({ ...d, profile: null }));
   };
   const resetDemo = () => {
