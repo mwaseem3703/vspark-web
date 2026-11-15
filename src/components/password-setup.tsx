@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowUpRight, ShieldCheck } from "lucide-react";
+import { ArrowUpRight, ShieldCheck, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { browserClient } from "@/lib/supabase/client";
 import { PublicShell } from "./shell";
@@ -15,6 +15,8 @@ export function PasswordSetup() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [showPass, setShowPass] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   useEffect(() => {
     let active = true;
     async function connect() {
@@ -119,26 +121,44 @@ export function PasswordSetup() {
             <form className="form-stack" onSubmit={save}>
               <label>
                 New password
-                <input
-                  type="password"
-                  name="password"
-                  minLength={12}
-                  maxLength={128}
-                  placeholder="At least 12 characters"
-                  autoComplete="new-password"
-                  required
-                />
+                <div className="password-input">
+                  <input
+                    type={showPass ? "text" : "password"}
+                    name="password"
+                    minLength={12}
+                    maxLength={128}
+                    placeholder="At least 12 characters"
+                    autoComplete="new-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(!showPass)}
+                    aria-label={showPass ? "Hide password" : "Show password"}
+                  >
+                    {showPass ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
               </label>
               <label>
                 Confirm password
-                <input
-                  type="password"
-                  name="confirm"
-                  minLength={12}
-                  maxLength={128}
-                  autoComplete="new-password"
-                  required
-                />
+                <div className="password-input">
+                  <input
+                    type={showConfirm ? "text" : "password"}
+                    name="confirm"
+                    minLength={12}
+                    maxLength={128}
+                    autoComplete="new-password"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirm(!showConfirm)}
+                    aria-label={showConfirm ? "Hide password" : "Show password"}
+                  >
+                    {showConfirm ? <EyeOff size={17} /> : <Eye size={17} />}
+                  </button>
+                </div>
               </label>
               {error && (
                 <p className="error-message" role="alert">

@@ -15,6 +15,11 @@ html {
   width: 6px;
   height: 6px;
 }
+::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
 ::-webkit-scrollbar-track {
   background: transparent;
 }
@@ -1387,20 +1392,38 @@ textarea {
   min-height: 100px;
   line-height: 1.7;
 }
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
 .password-input {
   position: relative;
+  display: block;
+  width: 100%;
 }
 .password-input input {
-  padding-right: 42px !important;
+  width: 100%;
+  padding-right: 44px !important;
 }
 .password-input button {
   position: absolute;
   top: 50%;
-  right: 12px;
+  right: 8px;
   transform: translateY(-50%);
   color: var(--text-muted, #6d7686);
   padding: 0;
   display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  z-index: 5;
+}
+.password-input button:hover {
+  color: var(--text-main, #1e293b);
 }
 .file-drop {
   display: flex;
@@ -4402,35 +4425,49 @@ tbody tr:hover {
   }
   .sidebar {
     position: fixed;
-    left: -260px;
-    top: 0;
-    height: 100dvh;
-    width: 235px;
-    transition: left 0.2s;
+    left: -280px;
+    top: 64px;
+    height: calc(100dvh - 64px);
+    max-height: calc(100dvh - 64px);
+    width: 250px;
+    z-index: 60;
+    transition: left 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--surface, #ffffff);
+    border-right: 1px solid var(--line, #e2e8f0);
   }
   .sidebar-open {
     left: 0;
   }
   .sidebar-brand {
-    padding: 30px 25px;
+    padding: 24px 20px;
   }
   .sidebar nav {
-    padding: 0 14px;
+    padding: 8px 14px 20px;
   }
   .side-link {
     font-size: 13px;
-    padding: 12px 13px;
+    padding: 12px 14px;
+  }
+  .sidebar-bottom {
+    margin-top: auto;
+    padding: 14px;
+    border-top: 1px solid var(--line, #e2e8f0);
+    background: inherit;
   }
   .sidebar-help {
-    margin: 40px 22px 22px;
-    padding: 18px;
+    margin: 30px 18px 20px;
+    padding: 16px;
   }
   .sidebar-overlay {
     display: block;
     position: fixed;
     inset: 0;
-    background: #15294c50;
-    z-index: 35;
+    top: 64px;
+    background: rgba(15, 23, 42, 0.55);
+    z-index: 55;
     backdrop-filter: blur(2px);
   }
   .workspace-top-navbar {
@@ -5155,6 +5192,26 @@ html[data-theme="dark"] .vspark-logo-dark {
 }
 [data-theme="dark"] .sidebar-bottom {
   border-top-color: #1e293b;
+}
+
+[data-theme="dark"] .password-input button {
+  color: #94a3b8;
+}
+[data-theme="dark"] .password-input button:hover {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .toast {
+  background: #111c33 !important;
+  color: #f8fafc !important;
+  border: 1px solid #1e293b !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6) !important;
+}
+[data-theme="dark"] .toast button {
+  color: #94a3b8 !important;
+}
+[data-theme="dark"] .toast button:hover {
+  color: #f1f5f9 !important;
 }
 
 /* Button Variants & Hover States */
@@ -6216,10 +6273,18 @@ html[data-theme="dark"] .vspark-logo-dark {
     font-size: 12px;
   }
   .theme-toggle,
-  .mobile-menu,
-  .password-input button {
+  .mobile-menu {
     min-width: 40px;
     min-height: 40px;
+  }
+  .password-input button {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 @media (prefers-reduced-motion: reduce) {

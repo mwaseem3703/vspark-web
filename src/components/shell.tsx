@@ -382,6 +382,7 @@ export function Workspace({
                     pathname === l.href ? "side-link active" : "side-link"
                   }
                   href={l.href}
+                  onClick={() => setMenu(false)}
                 >
                   <l.icon size={18} />
                   {l.label}
@@ -394,7 +395,12 @@ export function Workspace({
               ))}
             </nav>
             <div className="sidebar-bottom">
-              <Link href="/" className="side-link" style={{ marginBottom: "2px" }}>
+              <Link
+                href="/"
+                className="side-link"
+                style={{ marginBottom: "2px" }}
+                onClick={() => setMenu(false)}
+              >
                 <ExternalLink size={17} />
                 Back to website
               </Link>

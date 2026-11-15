@@ -191,23 +191,7 @@ export function NotificationPopover({
         <Bell size={20} />
         {badgeCount > 0 && (
           <span
-            style={{
-              position: "absolute",
-              top: "2px",
-              right: "2px",
-              minWidth: "16px",
-              height: "16px",
-              padding: "0 4px",
-              borderRadius: "9999px",
-              backgroundColor: "#2563eb",
-              color: "#ffffff",
-              fontSize: "10px",
-              fontWeight: 700,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              border: "2px solid #ffffff",
-            }}
+            className="absolute top-0.5 right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-blue-600 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white dark:border-[#0d1527]"
           >
             {badgeCount}
           </span>
@@ -216,50 +200,16 @@ export function NotificationPopover({
 
       {open && (
         <div
-          className="notification-popover"
-          style={{
-            position: "absolute",
-            right: 0,
-            top: "calc(100% + 8px)",
-            width: "340px",
-            maxWidth: "90vw",
-            backgroundColor: "#ffffff",
-            borderRadius: "12px",
-            boxShadow:
-              "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05)",
-            border: "1px solid #eaecf0",
-            zIndex: 9999,
-            overflow: "hidden",
-            animation: "fadeIn 0.15s ease-out",
-          }}
+          className="notification-popover absolute right-[-45px] sm:right-0 top-[calc(100%+8px)] w-[330px] max-w-[calc(100vw-20px)] bg-white dark:bg-[#0f172a] rounded-[12px] shadow-2xl border border-slate-200 dark:border-slate-800 z-50 overflow-hidden animate-in fade-in duration-150"
         >
           {/* Header */}
-          <div
-            className="notification-popover-header"
-            style={{
-              padding: "14px 16px",
-              borderBottom: "1px solid #eaecf0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              backgroundColor: "#fafbfd",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <strong style={{ fontSize: "14px", color: "#101828" }}>
+          <div className="notification-popover-header px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/90 dark:bg-[#162032]">
+            <div className="flex items-center gap-2">
+              <strong className="text-sm font-bold text-slate-900 dark:text-slate-100">
                 Notifications
               </strong>
               {notifications.length > 0 && (
-                <span
-                  style={{
-                    fontSize: "10px",
-                    fontWeight: 700,
-                    backgroundColor: "#e0e7ff",
-                    color: "#3730a3",
-                    padding: "2px 8px",
-                    borderRadius: "9999px",
-                  }}
-                >
+                <span className="text-[10px] font-bold bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800/60">
                   {notifications.length}
                 </span>
               )}
@@ -267,27 +217,22 @@ export function NotificationPopover({
             <button
               type="button"
               onClick={() => setOpen(false)}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#98a2b3",
-                cursor: "pointer",
-                padding: "2px",
-              }}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1 cursor-pointer transition-colors"
+              aria-label="Close notifications"
             >
               <X size={16} />
             </button>
           </div>
 
           {/* List */}
-          <div style={{ maxHeight: "360px", overflowY: "auto" }}>
+          <div className="max-h-[360px] overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800/70">
             {notifications.length === 0 ? (
-              <div style={{ padding: "32px 16px", textAlign: "center" }}>
+              <div className="py-8 px-4 text-center">
                 <CheckCircle2
                   size={32}
-                  className="text-slate-300 mx-auto mb-2"
+                  className="text-slate-300 dark:text-slate-600 mx-auto mb-2"
                 />
-                <p style={{ margin: 0, fontSize: "12px", color: "#64748b" }}>
+                <p className="m-0 text-xs text-slate-500 dark:text-slate-400">
                   All caught up! No new notifications.
                 </p>
               </div>
@@ -295,138 +240,48 @@ export function NotificationPopover({
               notifications.map((item) => (
                 <div
                   key={item.id}
-                  style={{
-                    padding: "12px 16px",
-                    borderBottom: "1px solid #f2f4f7",
-                    display: "flex",
-                    gap: "12px",
-                    alignItems: "flex-start",
-                    transition: "background 0.1s ease",
-                  }}
-                  className="notification-item-card hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                  className="p-3 sm:px-4 flex gap-3 items-start transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50"
                 >
-                  <div style={{ marginTop: "2px", flexShrink: 0 }}>
+                  <div className="mt-0.5 shrink-0">
                     {item.type === "success" && (
-                      <div
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "50%",
-                          backgroundColor: "#ecfdf5",
-                          color: "#059669",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
+                      <div className="w-7 h-7 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 flex items-center justify-center">
                         <CheckCircle2 size={15} />
                       </div>
                     )}
                     {item.type === "warning" && (
-                      <div
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "50%",
-                          backgroundColor: "#fffbeb",
-                          color: "#d97706",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
+                      <div className="w-7 h-7 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 flex items-center justify-center">
                         <Clock size={15} />
                       </div>
                     )}
                     {item.type === "purple" && (
-                      <div
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "50%",
-                          backgroundColor: "#f5f3ff",
-                          color: "#7c3aed",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
+                      <div className="w-7 h-7 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/60 flex items-center justify-center">
                         <Award size={15} />
                       </div>
                     )}
                     {item.type === "info" && (
-                      <div
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "50%",
-                          backgroundColor: "#eff6ff",
-                          color: "#2563eb",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                        }}
-                      >
+                      <div className="w-7 h-7 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/60 flex items-center justify-center">
                         <Megaphone size={15} />
                       </div>
                     )}
                   </div>
 
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "baseline",
-                        gap: "6px",
-                      }}
-                    >
-                      <h4
-                        style={{
-                          margin: 0,
-                          fontSize: "12px",
-                          fontWeight: 700,
-                          color: "#101828",
-                        }}
-                      >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-baseline gap-2">
+                      <h4 className="m-0 text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
                         {item.title}
                       </h4>
-                      <span
-                        style={{
-                          fontSize: "10px",
-                          color: "#98a2b3",
-                          fontWeight: 500,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
+                      <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium shrink-0 whitespace-nowrap">
                         {item.time}
                       </span>
                     </div>
-                    <p
-                      style={{
-                        margin: "3px 0 0",
-                        fontSize: "11px",
-                        color: "#475467",
-                        lineHeight: 1.5,
-                      }}
-                    >
+                    <p className="mt-1 mb-0 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
                       {item.message}
                     </p>
                     {item.link && (
                       <Link
                         href={item.link}
                         onClick={() => setOpen(false)}
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          fontSize: "11px",
-                          fontWeight: 700,
-                          color: "#2563eb",
-                          marginTop: "6px",
-                          textDecoration: "none",
-                        }}
-                        className="hover:underline"
+                        className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 dark:text-blue-400 hover:underline mt-1.5"
                       >
                         <span>View details</span>
                         <ArrowRight size={11} />

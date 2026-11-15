@@ -372,6 +372,7 @@ export function AuthPage({ register = false }: { register?: boolean }) {
                   type="button"
                   onClick={() => setShow(!show)}
                   aria-label={show ? "Hide password" : "Show password"}
+                  className="eye-toggle-btn"
                 >
                   {show ? <EyeOff size={17} /> : <Eye size={17} />}
                 </button>

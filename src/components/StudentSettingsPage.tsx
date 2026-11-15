@@ -287,7 +287,8 @@ export function StudentSettingsPage() {
                   <button
                     type="button"
                     onClick={() => setShowOld(!showOld)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer z-10"
+                    aria-label={showOld ? "Hide current password" : "Show current password"}
                   >
                     {showOld ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -311,7 +312,8 @@ export function StudentSettingsPage() {
                   <button
                     type="button"
                     onClick={() => setShowNew(!showNew)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer z-10"
+                    aria-label={showNew ? "Hide new password" : "Show new password"}
                   >
                     {showNew ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -335,7 +337,8 @@ export function StudentSettingsPage() {
                   <button
                     type="button"
                     onClick={() => setShowConfirm(!showConfirm)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer z-10"
+                    aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
                   >
                     {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
