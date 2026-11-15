@@ -1,0 +1,33 @@
+# Only explicitly declared values are pushed to the hosted project.
+project_id = "vspark-competition"
+
+[auth]
+site_url = "https://vspark-competition.vercel.app"
+additional_redirect_urls = [
+  "https://vspark-competition.vercel.app/auth/callback",
+  "https://vspark-competition.vercel.app/auth/setup",
+  "http://127.0.0.1:3000/auth/callback",
+  "http://127.0.0.1:3000/auth/setup"
+]
+
+# Credentials are resolved from the process environment, never stored here.
+[auth.email.smtp]
+enabled = true
+host = "smtp.gmail.com"
+port = 465
+user = "env(SMTP_USER)"
+pass = "env(SMTP_PASS)"
+admin_email = "env(SMTP_USER)"
+sender_name = "VSpark"
+
+[auth.email.template.confirmation]
+subject = "Confirm your VSpark email"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Reset your VSpark password"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.invite]
+subject = "Your VSpark invitation"
+content_path = "./supabase/templates/invite.html"

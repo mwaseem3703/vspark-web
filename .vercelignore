@@ -1,0 +1,10 @@
+.git
+.next
+node_modules
+tmp
+output
+.env*
+!.env.example
+*.tsbuildinfo
+Web Mid Lab.pdf
+tests
