@@ -54,6 +54,21 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 const folderCreationLocks = new Map<string, Promise<string>>();
+
+const PRODUCTION_SITE_URL = "https://vspark-competition.vercel.app";
+
+function getEmailSiteUrl(req?: NextRequest): string {
+  const envUrl = (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    ""
+  ).trim();
+  if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+    return envUrl.replace(/\/+$/, "");
+  }
+  return PRODUCTION_SITE_URL;
+}
+
 function driveParent(s: Settings) {
   return (
     driveFolderId(s.google_drive_folder_url || "") ||
@@ -442,9 +457,43 @@ async function get(req: NextRequest, path: string) {
         evaluation: s.results_published ? studentEval || undefined : undefined,
       }));
     }
-    const leaderboard = s.results_published
-      ? check(await db.rpc("published_leaderboard"))
-      : [];
+    let leaderboard: any[] = [];
+    if (s.results_published) {
+      const { data: subData, error: subErr } = await db
+        .from("submissions")
+        .select(`
+          id,
+          total_marks,
+          admin_feedback,
+          profile_id,
+          profiles:profile_id (
+            full_name,
+            university_name,
+            participation_type,
+            team_name,
+            teammate_name,
+            team_role
+          )
+        `)
+        .eq("graded", true)
+        .order("total_marks", { ascending: false });
+
+      if (!subErr && subData && subData.length > 0) {
+        leaderboard = subData.map((row: any) => ({
+          id: row.id,
+          full_name: row.profiles?.full_name || "Participant",
+          university_name: row.profiles?.university_name || "",
+          total_marks: row.total_marks || 0,
+          feedback: row.admin_feedback || "",
+          participation_type: row.profiles?.participation_type || "individual",
+          team_name: row.profiles?.team_name || "",
+          teammate_name: row.profiles?.teammate_name || "",
+          team_role: row.profiles?.team_role || "leader",
+        }));
+      } else {
+        leaderboard = check(await db.rpc("published_leaderboard")) || [];
+      }
+    }
     return json({
       services: {
         ...serviceReadiness(s, driveStatus.connected),
@@ -680,7 +729,7 @@ async function post(req: NextRequest, path: string) {
         },
         emailRedirectTo: new URL(
           "/auth/callback",
-          process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin,
+          getEmailSiteUrl(req),
         ).toString(),
       },
     });
@@ -812,7 +861,7 @@ async function post(req: NextRequest, path: string) {
         preheader:
           "Registration received. Your organizer will review your account.",
         actionLabel: "View registration status",
-        actionUrl: `${process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin}/pending`,
+        actionUrl: `${getEmailSiteUrl(req)}/pending`,
       },
     );
     if (!mail)
@@ -920,7 +969,7 @@ async function post(req: NextRequest, path: string) {
       studentName = (match.user_metadata?.full_name as string) || "Participant";
     }
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin;
+    const siteUrl = getEmailSiteUrl(req);
     const resetUrl = `${siteUrl}/reset-password?email=${encodeURIComponent(trimmedEmail)}`;
 
     const sent = await sendPasswordResetEmail({
@@ -1092,12 +1141,12 @@ async function post(req: NextRequest, path: string) {
         sent = await sendEmail(
           previous.email,
           "VSpark — You’re approved!",
-          `Hi ${previous.full_name},\n\nYour VSpark registration is approved. Log in to view your dashboard and competition schedule.\n\n${process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin}/login\n\nSee you at the challenge!\nThe VSpark team`,
+          `Hi ${previous.full_name},\n\nYour VSpark registration is approved. Log in to view your dashboard and competition schedule.\n\n${getEmailSiteUrl(req)}/login\n\nSee you at the challenge!\nThe VSpark team`,
           {
             heading: "You’re in. Let’s build.",
             preheader: "Your registration is approved. Your student dashboard is ready.",
             actionLabel: "Open your dashboard",
-            actionUrl: `${process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin}/dashboard`,
+            actionUrl: `${getEmailSiteUrl(req)}/dashboard`,
           },
         );
       }
@@ -1243,7 +1292,7 @@ async function post(req: NextRequest, path: string) {
       throw new ApiError("Valid student email address is required.", 400);
     }
     const trimmedEmail = email.trim().toLowerCase();
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin;
+    const siteUrl = getEmailSiteUrl(req);
     const resetUrl = `${siteUrl}/reset-password?email=${encodeURIComponent(trimmedEmail)}`;
 
     const sent = await sendPasswordResetEmail({
@@ -1270,7 +1319,19 @@ async function post(req: NextRequest, path: string) {
 
     const { data: subsData } = await db
       .from("submissions")
-      .select("profile_id, total_marks, profiles(full_name, email)")
+      .select(`
+        profile_id,
+        total_marks,
+        profiles (
+          id,
+          full_name,
+          email,
+          participation_type,
+          team_name,
+          teammate_name,
+          teammate_email
+        )
+      `)
       .order("total_marks", { ascending: false });
 
     const { data: allProfiles } = await db
@@ -1285,6 +1346,11 @@ async function post(req: NextRequest, path: string) {
       const sub = top3[i];
       const pData = (sub as any).profiles;
       const email = pData?.email;
+      const isTeam = pData?.participation_type === "team";
+      const teamName = isTeam ? pData?.team_name : undefined;
+      const teammateName = isTeam ? pData?.teammate_name : undefined;
+      const teammateEmail = isTeam ? pData?.teammate_email : undefined;
+
       if (email && email.includes("@")) {
         top3Emails.add(email.toLowerCase().trim());
         await sendPodiumWinnerEmail({
@@ -1292,6 +1358,20 @@ async function post(req: NextRequest, path: string) {
           studentName: pData?.full_name || "Winner",
           rank: i + 1,
           totalMarks: sub.total_marks || 0,
+          teamName,
+          teammateName,
+        });
+      }
+
+      if (teammateEmail && teammateEmail.includes("@")) {
+        top3Emails.add(teammateEmail.toLowerCase().trim());
+        await sendPodiumWinnerEmail({
+          to: teammateEmail.trim(),
+          studentName: teammateName || "Teammate",
+          rank: i + 1,
+          totalMarks: sub.total_marks || 0,
+          teamName,
+          teammateName: pData?.full_name,
         });
       }
     }

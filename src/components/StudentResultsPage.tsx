@@ -251,12 +251,29 @@ export function StudentResultsPage() {
                   </span>
                 </div>
 
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-                  {profile?.full_name || "Participant"}
-                </h1>
-                <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium">
-                  {profile?.university_name || "Participant Institution"} · Official Scorecard
-                </p>
+                {profile?.participation_type === "team" && profile.team_name ? (
+                  <div>
+                    <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 border border-blue-200 dark:border-blue-900 mb-1.5">
+                      👥 Team Scorecard · {profile.team_name}
+                    </div>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+                      {profile.team_name}
+                    </h1>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium mt-1">
+                      Leader: <strong>{profile.full_name}</strong>
+                      {profile.teammate_name ? <> · Partner: <strong>{profile.teammate_name}</strong></> : null} · {profile.university_name || "Participant Institution"}
+                    </p>
+                  </div>
+                ) : (
+                  <div>
+                    <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+                      {profile?.full_name || "Participant"}
+                    </h1>
+                    <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300 font-medium mt-1">
+                      {profile?.university_name || "Participant Institution"} · Official Scorecard
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Big Score Display */}

@@ -103,8 +103,16 @@ export function StudentDashboard() {
     <Workspace>
       <PageHeading
         eyebrow="YOUR NEXT BIG THING STARTS HERE"
-        title={`Welcome back, ${data.profile?.full_name.split(" ")[0] || "builder"} 👋`}
-        description="A little curiosity. A lot of potential. Let’s make something great."
+        title={
+          data.profile?.participation_type === "team" && data.profile.team_name
+            ? `Welcome, Team ${data.profile.team_name} 👋`
+            : `Welcome back, ${data.profile?.full_name.split(" ")[0] || "builder"} 👋`
+        }
+        description={
+          data.profile?.participation_type === "team" && data.profile.team_name
+            ? `Team: ${data.profile.team_name} · ${data.profile.team_role === "leader" ? "👑 Leader (Submitter)" : "👥 Member"}`
+            : "A little curiosity. A lot of potential. Let’s make something great."
+        }
         action={
           <span className="date-chip">
             <CalendarDays size={15} />
@@ -996,8 +1004,15 @@ export function TaskPage() {
                 <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
                   <span>Participant:</span>
                   <span className="font-semibold text-slate-800 dark:text-slate-200">
-                    {data.profile?.full_name || "Participant"} (
-                    {data.profile?.email})
+                    {data.profile?.participation_type === "team" && data.profile.team_name ? (
+                      <>
+                        👥 Team {data.profile.team_name} ({data.profile.full_name})
+                      </>
+                    ) : (
+                      <>
+                        {data.profile?.full_name || "Participant"} ({data.profile?.email})
+                      </>
+                    )}
                   </span>
                 </div>
                 <div className="flex flex-col gap-0.5 border-t border-slate-200/60 dark:border-slate-800/80 pt-2">

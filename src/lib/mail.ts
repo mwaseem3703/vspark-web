@@ -3,12 +3,19 @@ import fs from "node:fs";
 import path from "node:path";
 import { renderEmail } from "./email-template";
 
+export const PRODUCTION_SITE_URL = "https://vspark-competition.vercel.app";
+
 function getSiteUrl() {
-  return (
+  const envUrl = (
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.NEXT_PUBLIC_APP_URL ||
-    "https://vspark-web.vercel.app"
-  ).replace(/\/+$/, "");
+    ""
+  ).trim();
+
+  if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+    return envUrl.replace(/\/+$/, "");
+  }
+  return PRODUCTION_SITE_URL;
 }
 
 function getTransport() {
@@ -378,22 +385,38 @@ export async function sendPodiumWinnerEmail({
   studentName,
   rank,
   totalMarks,
+  teamName,
+  teammateName,
 }: {
   to: string;
   studentName: string;
   rank: number;
   totalMarks: number;
+  teamName?: string;
+  teammateName?: string;
 }) {
   const siteUrl = getSiteUrl();
-  const medal = rank === 1 ? "🥇 1st Place" : rank === 2 ? "🥈 2nd Place" : "🥉 3rd Place";
-  const text = `Dear ${studentName},\n\nCongratulations! We are thrilled to announce that you have achieved ${medal} in the VSpark 2026 Web Engineering Competition with a validated score of ${totalMarks}/100!\n\nOn behalf of COMSATS University Islamabad, Vehari Campus and the COMSATS Web Society, we commend your outstanding technical execution, architecture, and live presentation.\n\nView the official rankings and leaderboard on the competition portal.`;
+  const medal =
+    rank === 1
+      ? "🥇 1st Place (Champion)"
+      : rank === 2
+      ? "🥈 2nd Place (Runner Up)"
+      : "🥉 3rd Place (2nd Runner Up)";
+
+  const entityTitle = teamName ? `Team "${teamName}"` : studentName;
+  const greeting = teamName
+    ? `Dear ${studentName} & Team "${teamName}"${teammateName ? ` (Teammate: ${teammateName})` : ""},`
+    : `Dear ${studentName},`;
+
+  const text = `${greeting}\n\nCongratulations! We are thrilled to announce that ${entityTitle} has achieved ${medal} in the VSpark 2026 Web Engineering Competition with a validated score of ${totalMarks}/100!\n\nOn behalf of COMSATS University Islamabad, Vehari Campus and the COMSATS Web Society, we commend your outstanding technical execution, architecture, and live presentation.\n\nView the official rankings and leaderboard on the competition portal.`;
 
   return await sendEmail(
     to,
-    `🏆 Congratulations! You Won ${medal} - VSpark 2026`,
+    `🏆 Congratulations! ${entityTitle} Won ${medal} - VSpark 2026`,
     text,
     {
-      heading: `Congratulations, ${studentName}! ${medal}`,
+      heading: `Congratulations, ${entityTitle}! ${medal}`,
+      preheader: `${entityTitle} has secured ${medal} with ${totalMarks}/100 marks.`,
       actionLabel: "View Official Results",
       actionUrl: `${siteUrl}/results`,
     },

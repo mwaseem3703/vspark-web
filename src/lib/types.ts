@@ -103,6 +103,10 @@ export type LeaderEntry = {
   total_marks: number;
   feedback?: string;
   scores?: Record<string, number>;
+  participation_type?: "individual" | "team";
+  team_name?: string;
+  teammate_name?: string;
+  team_role?: "leader" | "member";
 };
 
 export type AppData = {

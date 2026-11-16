@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState, useRef, type FormEvent } from "react";
+import { useEffect, useState, useRef, useMemo, type FormEvent } from "react";
 import {
   ArrowUpRight,
   ArrowRight,
@@ -367,6 +367,7 @@ function CodeIcon() {
 
 function StudentDetailModal({
   student,
+  allStudents = [],
   submission,
   onClose,
   onReview,
@@ -376,6 +377,7 @@ function StudentDetailModal({
   busy,
 }: {
   student: Profile | null;
+  allStudents?: Profile[];
   submission?: Submission | null;
   onClose: () => void;
   onReview: (id: string, status: "approved" | "rejected") => void;
@@ -399,6 +401,44 @@ function StudentDetailModal({
   const isTeam = student.participation_type === "team";
   const receiptUrl = student.payment_receipt_url
     ? `/api/admin/receipt?id=${encodeURIComponent(student.id)}`
+    : null;
+
+  // Resolve Member 1 (Leader) and Member 2 (Teammate)
+  const matchedPartner = isTeam
+    ? allStudents.find(
+        (p) =>
+          p.id !== student.id &&
+          ((student.team_id && p.team_id === student.team_id) ||
+            (student.team_name &&
+              p.team_name?.trim().toLowerCase() ===
+                student.team_name.trim().toLowerCase()))
+      )
+    : null;
+
+  const leaderProfile: Profile =
+    !isTeam || student.team_role === "leader" || !matchedPartner
+      ? student
+      : matchedPartner.team_role === "leader"
+      ? matchedPartner
+      : student;
+
+  const teammateProfile: Profile | null = isTeam
+    ? matchedPartner || {
+        id: "teammate-" + student.id,
+        full_name: student.teammate_name || "Teammate",
+        email: student.teammate_email || "",
+        phone_no: student.teammate_phone || "",
+        department: student.teammate_department || student.department || null,
+        semester: student.teammate_semester || student.semester || null,
+        university_name: student.university_name,
+        role: "student",
+        status: student.status,
+        created_at: student.created_at || new Date().toISOString(),
+        participation_type: "team",
+        team_name: student.team_name,
+        team_role: "member",
+        payment_receipt_url: student.payment_receipt_url,
+      }
     : null;
 
   return (
@@ -426,7 +466,7 @@ function StudentDetailModal({
               <StatusBadge status={student.status} />
             </div>
             <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-              {isTeam ? student.team_name : student.full_name}
+              {isTeam ? `👥 Team: ${student.team_name}` : student.full_name}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               {student.university_name}
@@ -450,11 +490,15 @@ function StudentDetailModal({
           <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-[#0c1424] border border-slate-200 dark:border-slate-800">
             <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-200/60 dark:border-slate-800 text-xs">
               <span className="font-bold text-slate-900 dark:text-slate-100">
-                {isTeam ? "Member 1 (Team Leader / Submitter)" : "Participant Details"}
+                {isTeam ? "Member 1 (Team Leader & Submitter)" : "Participant Details"}
               </span>
-              {isTeam && (
+              {isTeam ? (
                 <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-1.5 py-0.5 rounded">
-                  Leader
+                  👑 Leader
+                </span>
+              ) : (
+                <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                  👤 Solo
                 </span>
               )}
             </div>
@@ -462,21 +506,21 @@ function StudentDetailModal({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
               <div>
                 <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Full Name</span>
-                <strong className="text-slate-900 dark:text-slate-100 text-[12.5px]">{student.full_name}</strong>
+                <strong className="text-slate-900 dark:text-slate-100 text-[12.5px]">{leaderProfile.full_name}</strong>
               </div>
               <div>
                 <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Email Address</span>
-                <a href={`mailto:${student.email}`} className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
-                  {student.email}
+                <a href={`mailto:${leaderProfile.email}`} className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+                  {leaderProfile.email}
                 </a>
               </div>
               <div>
                 <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Contact Number</span>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="font-mono text-slate-800 dark:text-slate-200">{student.phone_no || "N/A"}</span>
-                  {student.phone_no && (
+                  <span className="font-mono text-slate-800 dark:text-slate-200">{leaderProfile.phone_no || "N/A"}</span>
+                  {leaderProfile.phone_no && (
                     <a
-                      href={whatsapp(student.phone_no)}
+                      href={whatsapp(leaderProfile.phone_no)}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200"
@@ -489,42 +533,68 @@ function StudentDetailModal({
               <div>
                 <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Department & Semester</span>
                 <span className="text-slate-800 dark:text-slate-200 font-medium">
-                  {student.department || "Computer Science"} · {student.semester || "N/A"}
+                  {leaderProfile.department || "Computer Science"} · {leaderProfile.semester || "N/A"}
                 </span>
               </div>
+            </div>
+
+            {/* Member 1 Actions */}
+            <div className="flex flex-wrap items-center gap-2 pt-2.5 mt-2.5 border-t border-slate-200/70 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => onDirectEmail(leaderProfile)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-900 hover:bg-blue-50 dark:hover:bg-blue-950 transition-colors cursor-pointer"
+                title={`Send direct email to ${leaderProfile.full_name} (${leaderProfile.email})`}
+              >
+                <Mail size={12} /> {isTeam ? "Email Leader" : "Direct Email"}
+              </button>
+              <button
+                type="button"
+                disabled={busy === `reset-${leaderProfile.id}`}
+                onClick={() => onResetPassword(leaderProfile)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900 hover:bg-amber-50 dark:hover:bg-amber-950 transition-colors cursor-pointer disabled:opacity-50"
+                title={`Send password reset link to ${leaderProfile.email}`}
+              >
+                {busy === `reset-${leaderProfile.id}` ? (
+                  <RefreshCw size={12} className="animate-spin text-amber-600" />
+                ) : (
+                  <KeyRound size={12} />
+                )}
+                {isTeam ? "Reset Leader Password" : "Reset Password"}
+              </button>
             </div>
           </div>
 
           {/* Member 2 (If Team) */}
-          {isTeam && student.teammate_name && (
+          {isTeam && (teammateProfile?.full_name || student.teammate_name) && (
             <div className="p-3.5 rounded-lg bg-purple-50/40 dark:bg-purple-950/20 border border-purple-200/80 dark:border-purple-900/50">
               <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-purple-200/60 dark:border-purple-900/40 text-xs">
                 <span className="font-bold text-slate-900 dark:text-slate-100">
                   Member 2 (Teammate)
                 </span>
                 <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/60 px-1.5 py-0.5 rounded">
-                  View-only Member
+                  👥 Team Member
                 </span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
                 <div>
                   <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Full Name</span>
-                  <strong className="text-slate-900 dark:text-slate-100 text-[12.5px]">{student.teammate_name}</strong>
+                  <strong className="text-slate-900 dark:text-slate-100 text-[12.5px]">{teammateProfile?.full_name || student.teammate_name}</strong>
                 </div>
                 <div>
                   <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Email Address</span>
-                  <a href={`mailto:${student.teammate_email}`} className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
-                    {student.teammate_email || "N/A"}
+                  <a href={`mailto:${teammateProfile?.email || student.teammate_email}`} className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+                    {teammateProfile?.email || student.teammate_email || "N/A"}
                   </a>
                 </div>
                 <div>
                   <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Contact Number</span>
                   <div className="flex items-center gap-2 mt-0.5">
-                    <span className="font-mono text-slate-800 dark:text-slate-200">{student.teammate_phone || "N/A"}</span>
-                    {student.teammate_phone && (
+                    <span className="font-mono text-slate-800 dark:text-slate-200">{teammateProfile?.phone_no || student.teammate_phone || "N/A"}</span>
+                    {(teammateProfile?.phone_no || student.teammate_phone) && (
                       <a
-                        href={whatsapp(student.teammate_phone)}
+                        href={whatsapp(teammateProfile?.phone_no || student.teammate_phone!)}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200"
@@ -537,19 +607,47 @@ function StudentDetailModal({
                 <div>
                   <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Department & Semester</span>
                   <span className="text-slate-800 dark:text-slate-200 font-medium">
-                    {student.teammate_department || "Computer Science"} · {student.teammate_semester || "N/A"}
+                    {teammateProfile?.department || student.teammate_department || "Computer Science"} · {teammateProfile?.semester || student.teammate_semester || "N/A"}
                   </span>
                 </div>
               </div>
+
+              {/* Member 2 Actions */}
+              {teammateProfile && (
+                <div className="flex flex-wrap items-center gap-2 pt-2.5 mt-2.5 border-t border-purple-200/70 dark:border-purple-900/40">
+                  <button
+                    type="button"
+                    onClick={() => onDirectEmail(teammateProfile)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-900 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors cursor-pointer"
+                    title={`Send direct email to ${teammateProfile.full_name} (${teammateProfile.email})`}
+                  >
+                    <Mail size={12} /> Email Teammate
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy === `reset-${teammateProfile.id}`}
+                    onClick={() => onResetPassword(teammateProfile)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold bg-white dark:bg-slate-800 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900 hover:bg-amber-50 dark:hover:bg-amber-950 transition-colors cursor-pointer disabled:opacity-50"
+                    title={`Send password reset link to ${teammateProfile.email}`}
+                  >
+                    {busy === `reset-${teammateProfile.id}` ? (
+                      <RefreshCw size={12} className="animate-spin text-amber-600" />
+                    ) : (
+                      <KeyRound size={12} />
+                    )}
+                    Reset Teammate Password
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
 
-        {/* Payment Deposit Receipt Preview */}
+        {/* Payment Deposit Receipt Preview (Shared Team Asset) */}
         <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-[#0c1424] border border-slate-200 dark:border-slate-800 space-y-2">
           <div className="flex items-center justify-between text-xs">
             <span className="font-bold text-slate-900 dark:text-slate-100">
-              Payment Deposit Slip / Receipt
+              Payment Deposit Slip / Receipt {isTeam && <span className="text-slate-500 font-normal">(Shared Team Deposit)</span>}
             </span>
             {receiptUrl ? (
               <button
@@ -584,11 +682,11 @@ function StudentDetailModal({
           )}
         </div>
 
-        {/* Project Submissions & Code */}
+        {/* Project Submissions & Code (Shared Team Asset) */}
         <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-[#0c1424] border border-slate-200 dark:border-slate-800 space-y-2">
           <div className="flex items-center justify-between text-xs">
             <span className="font-bold text-slate-900 dark:text-slate-100">
-              Project Submissions & Code Files
+              Project Submissions & Code Files {isTeam && <span className="text-slate-500 font-normal">(Shared Team Code & Submissions)</span>}
             </span>
             {submission ? (
               <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
@@ -630,7 +728,7 @@ function StudentDetailModal({
                   href={submission.storage_archive_url}
                   target="_blank"
                   rel="noreferrer"
-                  download={`${(student.full_name || "student").replace(/[^a-zA-Z0-9_-]/g, "_")}_project.zip`}
+                  download={`${(isTeam && student.team_name ? student.team_name : student.full_name || "student").replace(/[^a-zA-Z0-9_-]/g, "_")}_project.zip`}
                   className="flex items-center gap-2 p-2 rounded bg-white dark:bg-[#101a2b] border border-emerald-200 dark:border-emerald-800 hover:border-emerald-400 text-emerald-700 dark:text-emerald-300 transition-colors font-medium"
                 >
                   <Download size={14} />
@@ -647,22 +745,8 @@ function StudentDetailModal({
 
         {/* Footer Actions */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => onDirectEmail(student)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition-colors cursor-pointer"
-            >
-              <Mail size={13} /> Direct Email
-            </button>
-            <button
-              type="button"
-              disabled={busy === `reset-${student.id}`}
-              onClick={() => onResetPassword(student)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition-colors cursor-pointer"
-            >
-              <KeyRound size={13} /> Send Reset Link
-            </button>
+          <div className="text-xs text-slate-500">
+            Account Status: <strong className="capitalize text-slate-800 dark:text-slate-200">{student.status}</strong>
           </div>
 
           <div className="flex items-center gap-2">
@@ -800,14 +884,39 @@ export function StudentsPage() {
     }
   };
 
-  const students = data.students.filter((s) => {
+  // Group and deduplicate students so each team appears as ONE unified entry
+  const unifiedStudents = useMemo(() => {
+    const teamMap = new Map<string, Profile>();
+    const solos: Profile[] = [];
+
+    for (const s of data.students) {
+      if (s.participation_type === "team") {
+        const teamKey = s.team_id || (s.team_name ? s.team_name.trim().toLowerCase() : s.id);
+        if (!teamMap.has(teamKey)) {
+          teamMap.set(teamKey, s);
+        } else {
+          // If the existing entry is not marked leader and this one is, use the leader
+          const existing = teamMap.get(teamKey)!;
+          if (existing.team_role !== "leader" && s.team_role === "leader") {
+            teamMap.set(teamKey, s);
+          }
+        }
+      } else {
+        solos.push(s);
+      }
+    }
+
+    return [...Array.from(teamMap.values()), ...solos];
+  }, [data.students]);
+
+  const students = unifiedStudents.filter((s) => {
     let matchFilter = true;
     if (filter === "all") matchFilter = true;
     else if (filter === "team") matchFilter = s.participation_type === "team";
     else if (filter === "individual") matchFilter = s.participation_type !== "team";
     else matchFilter = s.status === filter;
 
-    const matchSearch = `${s.full_name} ${s.email} ${s.university_name} ${s.team_name || ""} ${s.teammate_name || ""}`
+    const matchSearch = `${s.full_name} ${s.email} ${s.university_name} ${s.team_name || ""} ${s.teammate_name || ""} ${s.teammate_email || ""}`
       .toLowerCase()
       .includes(search.toLowerCase());
 
@@ -911,7 +1020,7 @@ export function StudentsPage() {
               display: "block",
             }}
           >
-            Total Students
+            Total Registrations
           </span>
           <strong
             style={{
@@ -922,7 +1031,7 @@ export function StudentsPage() {
               display: "block",
             }}
           >
-            {data.students.length}
+            {unifiedStudents.length}
           </strong>
         </div>
 
@@ -943,7 +1052,7 @@ export function StudentsPage() {
               display: "block",
             }}
           >
-            Active Students
+            Active Registrations
           </span>
           <strong
             style={{
@@ -954,7 +1063,7 @@ export function StudentsPage() {
               display: "block",
             }}
           >
-            {data.students.filter((s) => s.status === "approved").length}
+            {unifiedStudents.filter((s) => s.status === "approved").length}
           </strong>
         </div>
 
@@ -986,7 +1095,7 @@ export function StudentsPage() {
               display: "block",
             }}
           >
-            {data.students.filter((s) => s.status === "pending").length}
+            {unifiedStudents.filter((s) => s.status === "pending").length}
           </strong>
         </div>
       </div>
@@ -1005,12 +1114,12 @@ export function StudentsPage() {
           }}
         >
           {[
-            { key: "all", label: "All Students", count: data.students.length },
-            { key: "team", label: "Teams (👥)", count: data.students.filter((s) => s.participation_type === "team").length },
-            { key: "individual", label: "Individual (👤)", count: data.students.filter((s) => s.participation_type !== "team").length },
-            { key: "pending", label: "Pending Verification", count: data.students.filter((s) => s.status === "pending").length },
-            { key: "approved", label: "Active Students", count: data.students.filter((s) => s.status === "approved").length },
-            { key: "rejected", label: "Rejected", count: data.students.filter((s) => s.status === "rejected").length },
+            { key: "all", label: "All Registrations", count: unifiedStudents.length },
+            { key: "team", label: "Teams (👥)", count: unifiedStudents.filter((s) => s.participation_type === "team").length },
+            { key: "individual", label: "Individual (👤)", count: unifiedStudents.filter((s) => s.participation_type !== "team").length },
+            { key: "pending", label: "Pending Verification", count: unifiedStudents.filter((s) => s.status === "pending").length },
+            { key: "approved", label: "Active / Approved", count: unifiedStudents.filter((s) => s.status === "approved").length },
+            { key: "rejected", label: "Rejected", count: unifiedStudents.filter((s) => s.status === "rejected").length },
           ].map((t) => {
             const isActive = filter === t.key;
             return (
@@ -1135,7 +1244,7 @@ export function StudentsPage() {
                 alignItems: "center",
               }}
             >
-              <div>STUDENT</div>
+              <div>STUDENT / TEAM</div>
               <div>UNIVERSITY</div>
               <div>STATUS</div>
               <div>SUBMISSION & CODE</div>
@@ -1162,34 +1271,55 @@ export function StudentsPage() {
                 >
                   <div>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                      <span
-                        className="students-avatar-circle"
-                        style={{
-                          width: "36px",
-                          height: "36px",
-                          borderRadius: "50%",
-                          fontWeight: 700,
-                          fontSize: "12px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                        }}
-                      >
-                        {s.full_name
-                          .split(" ")
-                          .map((w: string) => w[0])
-                          .slice(0, 2)
-                          .join("")}
-                      </span>
+                      {s.participation_type === "team" ? (
+                        <span
+                          className="students-avatar-circle"
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "8px",
+                            fontWeight: 700,
+                            fontSize: "13px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            backgroundColor: "#dbeafe",
+                            color: "#1d4ed8",
+                          }}
+                        >
+                          <Users size={18} />
+                        </span>
+                      ) : (
+                        <span
+                          className="students-avatar-circle"
+                          style={{
+                            width: "36px",
+                            height: "36px",
+                            borderRadius: "50%",
+                            fontWeight: 700,
+                            fontSize: "12px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          {s.full_name
+                            .split(" ")
+                            .map((w: string) => w[0])
+                            .slice(0, 2)
+                            .join("")}
+                        </span>
+                      )}
                       <div style={{ minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
                           <strong style={{ fontSize: "13px", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                            {s.full_name}
+                            {s.participation_type === "team" ? (s.team_name || s.full_name) : s.full_name}
                           </strong>
                           {s.participation_type === "team" ? (
                             <span style={{ fontSize: "10px", fontWeight: 700, padding: "1px 6px", borderRadius: "4px", backgroundColor: "#dbeafe", color: "#1e40af" }}>
-                              👥 Team: {s.team_name} ({s.team_role === "leader" ? "👑 Leader" : "Member"})
+                              👥 Team (2 Members)
                             </span>
                           ) : (
                             <span style={{ fontSize: "10px", fontWeight: 600, padding: "1px 6px", borderRadius: "4px", backgroundColor: "#f1f5f9", color: "#475569" }}>
@@ -1197,13 +1327,21 @@ export function StudentsPage() {
                             </span>
                           )}
                         </div>
-                        <small style={{ fontSize: "11px", display: "block", marginTop: "1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {s.email}
-                        </small>
-                        {s.participation_type === "team" && s.teammate_name && (
-                          <div style={{ fontSize: "10.5px", color: "#64748b", marginTop: "2px" }}>
-                            Partner: <strong>{s.teammate_name}</strong> ({s.teammate_email})
+                        {s.participation_type === "team" ? (
+                          <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px", lineHeight: "1.3" }}>
+                            <div>
+                              <span className="font-semibold text-slate-700 dark:text-slate-300">👑 Leader:</span> {s.full_name} <span className="text-slate-400">({s.email})</span>
+                            </div>
+                            {s.teammate_name && (
+                              <div>
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">👥 Teammate:</span> {s.teammate_name} <span className="text-slate-400">{s.teammate_email ? `(${s.teammate_email})` : ""}</span>
+                              </div>
+                            )}
                           </div>
+                        ) : (
+                          <small style={{ fontSize: "11px", display: "block", marginTop: "1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {s.email}
+                          </small>
                         )}
                       </div>
                     </div>
@@ -1691,6 +1829,7 @@ export function StudentsPage() {
       {/* Comprehensive Student & Team Detail Modal */}
       <StudentDetailModal
         student={selectedStudent}
+        allStudents={data.students}
         submission={
           selectedStudent
             ? data.submissions.find(
@@ -1738,6 +1877,8 @@ export function EvaluationsPage() {
     title: "",
     message: "",
   });
+  const [scoreMode, setScoreMode] = useState<"direct" | "rubric">("direct");
+  const [directTotal, setDirectTotal] = useState<number>(0);
   const [rubricScores, setRubricScores] = useState<Record<string, number>>({
     ui_ux: 0,
     auth: 0,
@@ -1796,31 +1937,55 @@ export function EvaluationsPage() {
       docs: 0,
       defense: 0,
     };
+    const savedTotal = s.total_marks || (s.evaluation?.total_score || 0);
+    setDirectTotal(savedTotal);
+
     if (s.evaluation?.scores && Object.keys(s.evaluation.scores).length > 0) {
       Object.assign(initial, s.evaluation.scores);
-    } else if (s.total_marks > 0) {
-      for (const crit of OFFICIAL_RUBRIC) {
-        initial[crit.id] = Math.min(
-          crit.max,
-          Math.round((s.total_marks / 100) * crit.max),
-        );
-      }
+    } else if (savedTotal > 0) {
+      let running = 0;
+      OFFICIAL_RUBRIC.forEach((crit, index) => {
+        if (index === OFFICIAL_RUBRIC.length - 1) {
+          initial[crit.id] = Math.max(0, Math.min(crit.max, savedTotal - running));
+        } else {
+          const share = Math.min(crit.max, Math.round((savedTotal / 100) * crit.max));
+          initial[crit.id] = share;
+          running += share;
+        }
+      });
     }
     setRubricScores(initial);
   };
 
-  const currentTotal = OFFICIAL_RUBRIC.reduce(
-    (acc, c) => acc + (rubricScores[c.id] || 0),
-    0,
-  );
-
-  const handleScoreChange = (id: string, val: number, max: number) => {
-    const clamped = Math.max(0, Math.min(max, Math.round(val)));
-    setRubricScores((prev) => ({
-      ...prev,
-      [id]: clamped,
-    }));
+  const handleDirectScoreChange = (rawVal: number) => {
+    const val = Math.max(0, Math.min(100, Math.round(rawVal)));
+    setDirectTotal(val);
+    const newRubric: Record<string, number> = {};
+    let running = 0;
+    OFFICIAL_RUBRIC.forEach((crit, index) => {
+      if (index === OFFICIAL_RUBRIC.length - 1) {
+        newRubric[crit.id] = Math.max(0, Math.min(crit.max, val - running));
+      } else {
+        const share = Math.min(crit.max, Math.round((val / 100) * crit.max));
+        newRubric[crit.id] = share;
+        running += share;
+      }
+    });
+    setRubricScores(newRubric);
   };
+
+  const handleRubricScoreChange = (id: string, val: number, max: number) => {
+    const clamped = Math.max(0, Math.min(max, Math.round(val)));
+    const updated = { ...rubricScores, [id]: clamped };
+    setRubricScores(updated);
+    const newTotal = OFFICIAL_RUBRIC.reduce(
+      (acc, c) => acc + (updated[c.id] || 0),
+      0,
+    );
+    setDirectTotal(Math.min(100, newTotal));
+  };
+
+  const currentTotal = directTotal;
   const submissions = data.submissions
     .map((s) => ({
       ...s,
@@ -1993,12 +2158,35 @@ export function EvaluationsPage() {
                 </tr>
               </thead>
               <tbody>
-                {submissions.map((s) => (
-                  <tr key={s.id}>
-                    <td>
-                      <strong>{s.student_name}</strong>
-                      <small>{s.university_name}</small>
-                    </td>
+                {submissions.map((s) => {
+                  const student = data.students.find((p) => p.id === s.profile_id);
+                  const isTeamSubmission = student?.participation_type === "team" || Boolean(student?.team_name);
+                  return (
+                    <tr key={s.id}>
+                      <td>
+                        {isTeamSubmission ? (
+                          <div>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                                👥 Team
+                              </span>
+                              <strong className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                                {student?.team_name || "Team Project"}
+                              </strong>
+                            </div>
+                            <small className="text-slate-500 dark:text-slate-400 block mt-0.5">
+                              Leader: <strong>{student?.full_name || s.student_name}</strong>
+                              {student?.teammate_name ? <> · Partner: <strong>{student.teammate_name}</strong></> : null}
+                            </small>
+                            <small className="text-slate-400 block">{s.university_name || student?.university_name}</small>
+                          </div>
+                        ) : (
+                          <div>
+                            <strong>{s.student_name}</strong>
+                            <small className="text-slate-500 block">{s.university_name}</small>
+                          </div>
+                        )}
+                      </td>
                     <td>
                       <div className="table-actions">
                         <a
@@ -2047,7 +2235,8 @@ export function EvaluationsPage() {
                       </Button>
                     </td>
                   </tr>
-                ))}
+                );
+              })}
               </tbody>
             </table>
           </div>
@@ -2085,25 +2274,41 @@ export function EvaluationsPage() {
               borderRadius: "12px",
             }}
           >
-            <div className="card-heading">
-              <div>
-                <div className="eyebrow">OFFICIAL 100-MARK RUBRIC EVALUATION</div>
-                <h2 id="evaluation-title" style={{ fontSize: "20px", fontWeight: 800 }}>
-                  {selected.student_name}
-                </h2>
-                <span style={{ fontSize: "12px", color: "#64748b" }}>
-                  {selected.university_name || "Participant"}
-                </span>
-              </div>
-              <button
-                className="icon-link"
-                disabled={busy}
-                aria-label="Close evaluation"
-                onClick={() => setSelected(null)}
-              >
-                <X size={20} />
-              </button>
-            </div>
+            {(() => {
+              const student = data.students.find((p) => p.id === selected.profile_id);
+              const isTeam = student?.participation_type === "team" || Boolean(student?.team_name);
+              return (
+                <div className="card-heading">
+                  <div>
+                    <div className="eyebrow flex items-center gap-1.5">
+                      {isTeam ? "👥 TEAM EVALUATION" : "👤 PARTICIPANT EVALUATION"}
+                    </div>
+                    <h2 id="evaluation-title" style={{ fontSize: "20px", fontWeight: 800 }}>
+                      {isTeam ? student?.team_name : selected.student_name}
+                    </h2>
+                    <span style={{ fontSize: "12px", color: "#64748b" }}>
+                      {isTeam ? (
+                        <>
+                          Leader: <strong>{student?.full_name || selected.student_name}</strong>
+                          {student?.teammate_name ? <> · Partner: <strong>{student.teammate_name}</strong></> : null}
+                          {student?.university_name ? ` · ${student.university_name}` : ""}
+                        </>
+                      ) : (
+                        selected.university_name || "Participant"
+                      )}
+                    </span>
+                  </div>
+                  <button
+                    className="icon-link"
+                    disabled={busy}
+                    aria-label="Close evaluation"
+                    onClick={() => setSelected(null)}
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+              );
+            })()}
 
             {/* Quick Artifacts Links Bar */}
             <div className="flex flex-wrap items-center gap-2 my-3.5 px-3 py-2 bg-slate-50 dark:bg-[#0b1325] border border-slate-200 dark:border-[#1e293b] rounded-md">
@@ -2144,10 +2349,10 @@ export function EvaluationsPage() {
             </div>
 
             {/* Live Total Score Pill Banner */}
-            <div className="flex items-center justify-between p-3.5 mb-4 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60">
+            <div className="flex items-center justify-between p-3.5 mb-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60">
               <div>
                 <span className="text-[10px] font-bold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block">
-                  Auto-Calculated Total Marks
+                  Final Evaluated Score
                 </span>
                 <div className="text-[22px] font-extrabold text-emerald-950 dark:text-emerald-100 font-mono mt-0.5">
                   {currentTotal}{" "}
@@ -2185,71 +2390,156 @@ export function EvaluationsPage() {
               </div>
             </div>
 
-            <form className="form-stack" onSubmit={save}>
-              {/* 9 Rubric Criteria Sliders/Inputs */}
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-                  gap: "10px",
-                  marginBottom: "16px",
-                }}
+            {/* Score Entry Mode Switcher (Direct vs Rubric) */}
+            <div className="flex items-center gap-2 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg w-fit mb-3">
+              <button
+                type="button"
+                onClick={() => setScoreMode("direct")}
+                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                  scoreMode === "direct"
+                    ? "bg-white dark:bg-[#101a2b] text-blue-600 dark:text-blue-400 shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                }`}
               >
-                {OFFICIAL_RUBRIC.map((crit) => {
-                  const val = rubricScores[crit.id] || 0;
-                  return (
-                    <div
-                      key={crit.id}
-                      className="evaluation-rubric-card"
-                      style={{
-                        padding: "10px 12px",
-                        borderRadius: "6px",
-                      }}
-                    >
+                ⚡ Direct Score (Out of 100)
+              </button>
+              <button
+                type="button"
+                onClick={() => setScoreMode("rubric")}
+                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                  scoreMode === "rubric"
+                    ? "bg-white dark:bg-[#101a2b] text-blue-600 dark:text-blue-400 shadow-xs"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                }`}
+              >
+                📋 Detailed 9-Category Rubric
+              </button>
+            </div>
+
+            <form className="form-stack" onSubmit={save}>
+              {scoreMode === "direct" ? (
+                /* OPTION A: Direct Total Score Input (Out of 100) */
+                <div className="p-4 mb-4 rounded-lg bg-slate-50 dark:bg-[#0c1424] border border-slate-200 dark:border-slate-800 space-y-3.5">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100 block">
+                        Enter Score Directly (0 – 100)
+                      </span>
+                      <p className="text-[11px] text-slate-500 m-0">
+                        Type numbers or drag slider. Criteria will automatically balance for student scorecard.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={directTotal}
+                        onChange={(e) => handleDirectScoreChange(Number(e.target.value))}
+                        className="w-16 h-10 text-center text-lg font-mono font-extrabold rounded-md border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                      />
+                      <span className="text-sm font-bold text-slate-400">/ 100</span>
+                    </div>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={directTotal}
+                    onChange={(e) => handleDirectScoreChange(Number(e.target.value))}
+                    className="w-full h-2 cursor-pointer accent-blue-600"
+                  />
+
+                  {/* Fast Preset Marks */}
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1.5">
+                      Quick Preset Marks:
+                    </span>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {[50, 60, 65, 70, 75, 80, 85, 90, 95, 100].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => handleDirectScoreChange(preset)}
+                          className={`px-2.5 py-1 text-xs font-bold rounded cursor-pointer transition-colors ${
+                            directTotal === preset
+                              ? "bg-blue-600 text-white"
+                              : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750"
+                          }`}
+                        >
+                          {preset}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* OPTION B: Categorized 9-Criterion Rubric */
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+                    gap: "10px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  {OFFICIAL_RUBRIC.map((crit) => {
+                    const val = rubricScores[crit.id] || 0;
+                    return (
                       <div
+                        key={crit.id}
+                        className="evaluation-rubric-card"
                         style={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          marginBottom: "3px",
+                          padding: "10px 12px",
+                          borderRadius: "6px",
                         }}
                       >
-                        <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                          {crit.label}
-                        </span>
-                        <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                          Max {crit.max}
-                        </span>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            marginBottom: "3px",
+                          }}
+                        >
+                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                            {crit.label}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">
+                            Max {crit.max}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 m-0 mb-2 leading-snug">
+                          {crit.description}
+                        </p>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <input
+                            type="range"
+                            min={0}
+                            max={crit.max}
+                            value={val}
+                            onChange={(e) =>
+                              handleRubricScoreChange(crit.id, Number(e.target.value), crit.max)
+                            }
+                            style={{ flex: 1, height: "6px", cursor: "pointer" }}
+                          />
+                          <input
+                            type="number"
+                            min={0}
+                            max={crit.max}
+                            value={val}
+                            onChange={(e) =>
+                              handleRubricScoreChange(crit.id, Number(e.target.value), crit.max)
+                            }
+                            className="w-12 h-7 text-center text-xs font-bold rounded border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#060b18] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                          />
+                        </div>
                       </div>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 m-0 mb-2 leading-snug">
-                        {crit.description}
-                      </p>
-                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <input
-                          type="range"
-                          min={0}
-                          max={crit.max}
-                          value={val}
-                          onChange={(e) =>
-                            handleScoreChange(crit.id, Number(e.target.value), crit.max)
-                          }
-                          style={{ flex: 1, height: "6px", cursor: "pointer" }}
-                        />
-                        <input
-                          type="number"
-                          min={0}
-                          max={crit.max}
-                          value={val}
-                          onChange={(e) =>
-                            handleScoreChange(crit.id, Number(e.target.value), crit.max)
-                          }
-                          className="w-12 h-7 text-center text-xs font-bold rounded border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#060b18] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
 
               {/* Total marks input (bound to currentTotal or manual override) */}
               <input type="hidden" name="marks" value={currentTotal} />

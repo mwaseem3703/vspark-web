@@ -151,9 +151,26 @@ FOR EACH ROW EXECUTE FUNCTION public.handle_signup();
 
 -- Published Leaderboard RPC
 CREATE OR REPLACE FUNCTION public.published_leaderboard()
-RETURNS TABLE(id uuid, full_name text, university_name text, total_marks integer, feedback text)
+RETURNS TABLE(
+  id uuid,
+  full_name text,
+  university_name text,
+  total_marks integer,
+  feedback text,
+  participation_type text,
+  team_name text,
+  teammate_name text
+)
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path='' AS $$
-  SELECT s.id, p.full_name, p.university_name, s.total_marks, s.admin_feedback
+  SELECT 
+    s.id, 
+    p.full_name, 
+    p.university_name, 
+    s.total_marks, 
+    s.admin_feedback,
+    COALESCE(p.participation_type, 'individual'),
+    COALESCE(p.team_name, ''),
+    COALESCE(p.teammate_name, '')
   FROM public.submissions s
   JOIN public.profiles p ON p.id = s.profile_id
   WHERE s.graded AND exists(SELECT 1 FROM public.competition_settings WHERE id = 1 AND results_published)

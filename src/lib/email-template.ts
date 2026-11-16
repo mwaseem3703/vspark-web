@@ -19,16 +19,25 @@ export function escapeEmail(value: string) {
       ]!,
   );
 }
+export const PRODUCTION_SITE_URL = "https://vspark-competition.vercel.app";
+
 function emailUrl(value: string) {
   if (value === "{{ .ConfirmationURL }}" || value === "{{ .SiteURL }}")
     return value;
-  const url = new URL(value);
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("Email links must use a trusted HTTP(S) address.");
+  }
+  // Remove any localhost / 127.0.0.1 references and point strictly to production Vercel deployment
+  if (url.hostname === "localhost" || url.hostname === "127.0.0.1") {
+    return escapeEmail(
+      `${PRODUCTION_SITE_URL}${url.pathname}${url.search}${url.hash}`,
+    );
+  }
   if (
-    (url.protocol !== "https:" &&
-      !(
-        url.protocol === "http:" &&
-        ["localhost", "127.0.0.1"].includes(url.hostname)
-      )) ||
+    url.protocol !== "https:" ||
     url.username ||
     url.password
   )
