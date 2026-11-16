@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { CreditCard, Save, CheckCircle2, AlertCircle, RefreshCw } from "lucide-react";
 import { Workspace, PageHeading } from "./shell";
-import { useApp } from "./provider";
+import { useApp, request } from "./provider";
 import { FigmaSuccessModal } from "./ScallopedBadge";
 
 export function AdminBankPage() {
@@ -29,8 +29,7 @@ export function AdminBankPage() {
   });
 
   useEffect(() => {
-    fetch("/api/bank")
-      .then((res) => (res.ok ? res.json() : null))
+    request("bank")
       .then((resData) => {
         if (resData) {
           setBankInfo({
@@ -51,16 +50,10 @@ export function AdminBankPage() {
     setMessage(null);
 
     try {
-      const res = await fetch("/api/bank", {
+      await request("bank", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(bankInfo),
       });
-
-      if (!res.ok) {
-        const errJson = await res.json().catch(() => ({}));
-        throw new Error(errJson.error || "Failed to update bank details.");
-      }
 
       setMessage({
         text: "Registration Fee & Banking Deposit Details updated successfully.",
@@ -95,6 +88,7 @@ export function AdminBankPage() {
             type="button"
             onClick={handleSaveBank}
             disabled={loading || initialLoading}
+            style={{ backgroundColor: "#059669", color: "#ffffff" }}
             className="h-9 px-4 inline-flex items-center gap-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-[2px] shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
           >
             {loading ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
@@ -230,6 +224,7 @@ export function AdminBankPage() {
           <button
             type="submit"
             disabled={loading}
+            style={{ backgroundColor: "#059669", color: "#ffffff" }}
             className="h-10 px-6 inline-flex items-center gap-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-[2px] shadow-xs transition-colors disabled:opacity-60 cursor-pointer"
           >
             {loading ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}

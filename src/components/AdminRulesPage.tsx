@@ -13,7 +13,7 @@ import {
 import { Workspace, PageHeading } from "./shell";
 import { CompetitionRulesModal } from "./CompetitionRulesModal";
 import RichTextEditor from "./RichTextEditor";
-import { useApp } from "./provider";
+import { useApp, request } from "./provider";
 import { FigmaSuccessModal } from "./ScallopedBadge";
 
 const DEFAULT_CHECKLIST_TEXT = `Registration, login, logout, and protected routes work.
@@ -54,27 +54,24 @@ export function AdminRulesPage() {
 
   const fetchRules = useCallback(async () => {
     try {
-      const res = await fetch("/api/bank");
-      if (res.ok) {
-        const data = await res.json();
-        if (data) {
-          let checklistStr = DEFAULT_CHECKLIST_TEXT;
-          if (Array.isArray(data.checklist)) {
-            checklistStr = data.checklist.join("\n");
-          } else if (typeof data.checklist === "string" && data.checklist.trim()) {
-            checklistStr = data.checklist;
-          }
-
-          setGuidelinesInfo({
-            allowedTechStack:
-              data.allowedTechStack ||
-              "Next.js 15/16, React 19, Tailwind CSS, TypeScript / JavaScript, Supabase / PostgreSQL, Node.js, Vercel",
-            competitionGuidelines: data.competitionGuidelines || "",
-            gradingCriteria: data.gradingCriteria || "",
-            checklist: checklistStr,
-            evaluatorEmail: data.evaluatorEmail || "aliblogspot769@gmail.com",
-          });
+      const data = await request("bank");
+      if (data) {
+        let checklistStr = DEFAULT_CHECKLIST_TEXT;
+        if (Array.isArray(data.checklist)) {
+          checklistStr = data.checklist.join("\n");
+        } else if (typeof data.checklist === "string" && data.checklist.trim()) {
+          checklistStr = data.checklist;
         }
+
+        setGuidelinesInfo({
+          allowedTechStack:
+            data.allowedTechStack ||
+            "Next.js 15/16, React 19, Tailwind CSS, TypeScript / JavaScript, Supabase / PostgreSQL, Node.js, Vercel",
+          competitionGuidelines: data.competitionGuidelines || "",
+          gradingCriteria: data.gradingCriteria || "",
+          checklist: checklistStr,
+          evaluatorEmail: data.evaluatorEmail || "aliblogspot769@gmail.com",
+        });
       }
     } catch (err) {
       console.error("Failed to load rules & guidelines:", err);
@@ -130,9 +127,8 @@ Total: 100 Marks`,
             .filter(Boolean)
         : [];
 
-      const res = await fetch("/api/bank", {
+      await request("bank", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           allowedTechStack: guidelinesInfo.allowedTechStack,
           competitionGuidelines: guidelinesInfo.competitionGuidelines,
@@ -141,11 +137,6 @@ Total: 100 Marks`,
           evaluatorEmail: guidelinesInfo.evaluatorEmail,
         }),
       });
-
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to update guidelines.");
-      }
 
       setMessage({
         text: "Competition Guidelines, Evaluation Rubric & Popup Checklist saved successfully.",
@@ -208,10 +199,11 @@ Total: 100 Marks`,
               type="button"
               onClick={() => handleSaveRules()}
               disabled={loading}
+              style={{ backgroundColor: "#9333ea", color: "#ffffff" }}
               className="h-9 px-4 inline-flex items-center gap-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-[2px] shadow-xs transition-colors disabled:opacity-60 cursor-pointer"
             >
               {loading ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-              <span>{loading ? "Saving..." : "Save Rules"}</span>
+              <span>{loading ? "Saving..." : "Save Rules & Guidelines"}</span>
             </button>
           </div>
         }
@@ -361,6 +353,7 @@ Total: 100 Marks`,
           <button
             type="submit"
             disabled={loading}
+            style={{ backgroundColor: "#9333ea", color: "#ffffff" }}
             className="h-10 px-6 inline-flex items-center gap-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 rounded-[2px] shadow-xs transition-colors disabled:opacity-60 cursor-pointer"
           >
             {loading ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}

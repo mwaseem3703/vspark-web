@@ -17,6 +17,8 @@ import {
   Award,
   Layers,
   MessageCircle,
+  Send,
+  RefreshCw,
 } from "lucide-react";
 import { Logo, PublicShell } from "./shell";
 import { useApp, request } from "./provider";
@@ -543,16 +545,33 @@ export function AuthPage({ register = false }: { register?: boolean }) {
                   type="button"
                   onClick={() => setForgotOpen(false)}
                   disabled={forgotLoading}
-                  className="h-9 px-4 rounded-[2px] text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer border-0 transition-colors"
+                  className="h-10 px-4 rounded-[4px] text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 cursor-pointer border-0 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={forgotLoading || !forgotEmail.trim()}
-                  className="h-9 px-5 rounded-[2px] text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer border-0 transition-colors disabled:opacity-50"
+                  style={{
+                    backgroundColor: "#2563eb",
+                    color: "#ffffff",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: "8px",
+                  }}
+                  className="btn btn-primary h-10 px-6 rounded-[4px] text-xs font-bold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer shadow-sm transition-all disabled:opacity-50"
                 >
-                  {forgotLoading ? "Sending Link..." : "Send Reset Link"}
+                  {forgotLoading ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      <span>Sending Link...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send size={14} />
+                      <span>Send Reset Link</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

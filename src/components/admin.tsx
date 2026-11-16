@@ -34,6 +34,9 @@ import {
   KeyRound,
   Download,
   Award,
+  Landmark,
+  BookOpen,
+  CreditCard,
 } from "lucide-react";
 import { useApp, request } from "./provider";
 import { Workspace, PageHeading, StatusBadge, EmptyState } from "./shell";
@@ -44,7 +47,7 @@ import { OFFICIAL_RUBRIC, type Settings, type Submission } from "@/lib/types";
 import { useNow } from "./student";
 import { canonicalDriveFolder, driveFolderId } from "@/lib/drive-folder";
 import { FigmaSuccessModal, ReceiptModal } from "./ScallopedBadge";
-import { extractConfigFromDescription, embedConfigInDescription } from "@/lib/competition-rules";
+import { extractConfigFromDescription, embedConfigInDescription, DEFAULT_CONFIG } from "@/lib/competition-rules";
 function GoogleDriveIcon({ size = 15 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 87.3 78" style={{ display: "inline-block" }}>
@@ -2026,10 +2029,27 @@ export function SettingsPage() {
       if (Date.parse(end) <= Date.parse(start))
         throw new Error("The end time must be after the start time.");
 
+      const rawEvaluatorEmail = String(form.get("evaluator_email") || "").trim();
+      const rawBankName = String(form.get("bank_name") || "").trim();
+      const rawBankTitle = String(form.get("bank_title") || "").trim();
+      const rawBankAccount = String(form.get("bank_account") || "").trim();
+      const rawBankIban = String(form.get("bank_iban") || "").trim();
+      const rawFeeAmount = String(form.get("fee_amount") || "").trim();
+      const rawTechStack = String(form.get("allowed_tech_stack") || "").trim();
+
       let updatedTaskDesc = String(form.get("task_description")).trim();
-      const existingCfg = extractConfigFromDescription(data.settings.task_description);
+      const existingCfg = extractConfigFromDescription(data.settings.task_description) || DEFAULT_CONFIG;
       const newCfg = extractConfigFromDescription(updatedTaskDesc);
-      const mergedCfg = { ...existingCfg, ...newCfg };
+      const mergedCfg = {
+        ...existingCfg,
+        ...newCfg,
+        ...(rawEvaluatorEmail ? { evaluatorEmail: rawEvaluatorEmail } : {}),
+        ...(rawBankName ? { bankName: rawBankName } : {}),
+        ...(rawBankTitle ? { accountTitle: rawBankTitle } : {}),
+        ...(rawBankAccount ? { accountNumber: rawBankAccount } : {}),
+        ...(rawFeeAmount ? { feeAmount: rawFeeAmount } : {}),
+        ...(rawTechStack ? { allowedTechStack: rawTechStack } : {}),
+      };
       updatedTaskDesc = embedConfigInDescription(updatedTaskDesc, mergedCfg);
 
       const next: Settings = {
@@ -2041,10 +2061,10 @@ export function SettingsPage() {
         submission_mode: mode,
         results_published: published,
         event_location: String(form.get("event_location")).trim(),
-        bank_name: data.settings.bank_name || "Easypaisa / HBL",
-        bank_title: data.settings.bank_title || "COMSATS Web Society",
-        bank_account: data.settings.bank_account || "0123 4567 8901 23",
-        bank_iban: data.settings.bank_iban || "PK00HBLB01234567890123",
+        bank_name: rawBankName || data.settings.bank_name || "Easypaisa / HBL",
+        bank_title: rawBankTitle || data.settings.bank_title || "COMSATS Web Society",
+        bank_account: rawBankAccount || data.settings.bank_account || "0123 4567 8901 23",
+        bank_iban: rawBankIban || data.settings.bank_iban || "PK00HBLB01234567890123",
         google_drive_folder_url: driveUrl.trim()
           ? canonicalDriveFolder(driveUrl)
           : (data.settings.google_drive_folder_url || ""),
@@ -2058,7 +2078,33 @@ export function SettingsPage() {
       if (demo) update((d) => ({ ...d, settings: next }));
       else {
         form.set("settings", JSON.stringify(next));
+        form.set("evaluator_email", rawEvaluatorEmail || mergedCfg.evaluatorEmail || "");
+        form.set("fee_amount", rawFeeAmount || mergedCfg.feeAmount || "");
+        form.set("allowed_tech_stack", rawTechStack || mergedCfg.allowedTechStack || "");
+        form.set("bank_name", next.bank_name);
+        form.set("bank_title", next.bank_title);
+        form.set("bank_account", next.bank_account);
+        form.set("bank_iban", next.bank_iban);
+
         await request("admin/settings", { method: "POST", body: form });
+
+        // Atomic sync with bank and rules endpoint
+        try {
+          await request("bank", {
+            method: "POST",
+            body: JSON.stringify({
+              accountTitle: next.bank_title,
+              accountNumber: next.bank_account,
+              bankName: next.bank_name,
+              feeAmount: rawFeeAmount || mergedCfg.feeAmount || "Rs. 500",
+              allowedTechStack: rawTechStack || mergedCfg.allowedTechStack,
+              evaluatorEmail: rawEvaluatorEmail || mergedCfg.evaluatorEmail || "aliblogspot769@gmail.com",
+            }),
+          });
+        } catch (syncErr) {
+          console.warn("Bank sync fallback warning:", syncErr);
+        }
+
         await refresh();
       }
 
@@ -2067,7 +2113,7 @@ export function SettingsPage() {
         title: "Competition Settings Saved!",
         message: demo && filename
           ? "Demo settings saved successfully. The PDF was not uploaded."
-          : "Competition settings, timeline, and rules updated successfully.",
+          : "Competition settings, evaluator email, banking details, and rules updated successfully.",
       });
       notify(
         demo && filename
@@ -2092,10 +2138,11 @@ export function SettingsPage() {
             type="button"
             onClick={() => formRef.current?.requestSubmit()}
             disabled={busy}
-            className="h-9 px-4 inline-flex items-center gap-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-[2px] shadow-xs cursor-pointer"
+            style={{ backgroundColor: "#2563eb", color: "#ffffff" }}
+            className="h-10 px-5 inline-flex items-center gap-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-[2px] shadow-sm cursor-pointer"
           >
             {busy ? <RefreshCw size={14} className="animate-spin" /> : <Save size={14} />}
-            <span>{busy ? "Saving..." : "Save Settings"}</span>
+            <span>{busy ? "Saving Settings..." : "Save Settings"}</span>
           </Button>
         }
       />
@@ -2167,6 +2214,120 @@ export function SettingsPage() {
               )}
             </div>
           </section>
+
+          {/* Faculty Evaluator Data Access Email */}
+          <section className="card settings-card">
+            <div className="settings-section-title">
+              <span className="stat-icon violet">
+                <Mail size={20} />
+              </span>
+              <div>
+                <h3>Faculty Evaluator Data Access Email</h3>
+                <p>Collaborator access email for private student GitHub repositories.</p>
+              </div>
+            </div>
+            <div className="form-stack">
+              <label>
+                Faculty Evaluator / Collaborator Email
+                <input
+                  type="email"
+                  name="evaluator_email"
+                  defaultValue={currentConfig.evaluatorEmail || "aliblogspot769@gmail.com"}
+                  placeholder="faculty@university.edu or aliblogspot769@gmail.com"
+                />
+              </label>
+              <p className="control-explanation">
+                Students will be instructed to invite this email as a collaborator to their private GitHub repository during code submission.
+              </p>
+            </div>
+          </section>
+
+          {/* Banking & Registration Fee Details */}
+          <section className="card settings-card">
+            <div className="settings-section-title">
+              <span className="stat-icon green">
+                <Landmark size={20} />
+              </span>
+              <div>
+                <h3>Bank Transfer &amp; Registration Fee Details</h3>
+                <p>
+                  Published on the public portal and shown during student registration fee deposit.
+                </p>
+              </div>
+            </div>
+            <div className="form-grid">
+              <label>
+                Bank / Mobile Wallet Name
+                <input
+                  name="bank_name"
+                  maxLength={100}
+                  defaultValue={currentConfig.bankName || data.settings.bank_name || "Easypaisa / HBL"}
+                  placeholder="Easypaisa / HBL / JazzCash"
+                />
+              </label>
+              <label>
+                Account Title
+                <input
+                  name="bank_title"
+                  maxLength={150}
+                  defaultValue={currentConfig.accountTitle || data.settings.bank_title || "COMSATS Web Society"}
+                  placeholder="e.g. COMSATS Web Society"
+                />
+              </label>
+              <label>
+                Account Number
+                <input
+                  name="bank_account"
+                  maxLength={80}
+                  defaultValue={currentConfig.accountNumber || data.settings.bank_account || "0123 4567 8901 23"}
+                  placeholder="e.g. 0123 4567 8901 23"
+                />
+              </label>
+              <label>
+                Account IBAN
+                <input
+                  name="bank_iban"
+                  maxLength={80}
+                  defaultValue={data.settings.bank_iban || currentConfig.accountNumber || "PK00HBLB01234567890123"}
+                  placeholder="e.g. PK00HBLB01234567890123"
+                />
+              </label>
+              <label>
+                Registration Fee Amount
+                <input
+                  name="fee_amount"
+                  maxLength={50}
+                  defaultValue={currentConfig.feeAmount || "Rs. 500"}
+                  placeholder="e.g. Rs. 500"
+                />
+              </label>
+            </div>
+          </section>
+
+          {/* Approved Tech Stack & Code Rules (Roles) */}
+          <section className="card settings-card">
+            <div className="settings-section-title">
+              <span className="stat-icon purple">
+                <BookOpen size={20} />
+              </span>
+              <div>
+                <h3>Approved Frameworks &amp; Rules</h3>
+                <p>Permitted technologies and frameworks allowed for competition projects.</p>
+              </div>
+            </div>
+            <div className="form-stack">
+              <label>
+                Permitted Tech Stack &amp; Libraries
+                <input
+                  name="allowed_tech_stack"
+                  maxLength={250}
+                  defaultValue={currentConfig.allowedTechStack || "Next.js 15/16, React 19, Tailwind CSS, TypeScript / JavaScript, Supabase / PostgreSQL, Node.js, Vercel"}
+                  placeholder="e.g. Next.js 15/16, React 19, Tailwind CSS..."
+                />
+              </label>
+            </div>
+          </section>
+
           <section className="card settings-card">
             <div className="settings-section-title">
               <span className="stat-icon violet">
@@ -2209,6 +2370,7 @@ export function SettingsPage() {
               />
             </label>
           </section>
+
           <section className="card settings-card">
             <div className="settings-section-title">
               <span className="stat-icon amber">
@@ -2233,6 +2395,22 @@ export function SettingsPage() {
               ))}
             </div>
           </section>
+
+          {/* Big Prominent Save Button at Bottom of Main Column */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-white dark:bg-[#101a2b] border border-slate-200 dark:border-[#1e293b] rounded-[6px] shadow-sm">
+            <span className="text-xs text-slate-600 dark:text-slate-300">
+              Save challenge brief, evaluator access email, banking fee details, and event timeline.
+            </span>
+            <Button
+              type="submit"
+              disabled={busy}
+              style={{ backgroundColor: "#2563eb", color: "#ffffff" }}
+              className="w-full sm:w-auto h-11 px-8 text-xs font-bold inline-flex items-center justify-center gap-2 rounded-[2px] shadow-sm hover:bg-blue-700 cursor-pointer"
+            >
+              {busy ? <RefreshCw size={15} className="animate-spin" /> : <Save size={15} />}
+              <span>{busy ? "Saving Changes…" : "Save All Changes"}</span>
+            </Button>
+          </div>
         </div>
         <aside className="settings-controls">
           <section className="card settings-card">
@@ -2275,7 +2453,12 @@ export function SettingsPage() {
                 {error}
               </p>
             )}
-            <Button type="submit" disabled={busy} className="h-10 text-xs font-bold w-full mt-2">
+            <Button
+              type="submit"
+              disabled={busy}
+              style={{ backgroundColor: "#2563eb", color: "#ffffff" }}
+              className="h-10 text-xs font-bold w-full mt-2 inline-flex items-center justify-center gap-2"
+            >
               <Save size={16} />
               {busy ? "Saving changes…" : "Save changes"}
             </Button>

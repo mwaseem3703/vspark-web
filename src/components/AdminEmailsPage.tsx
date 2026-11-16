@@ -18,7 +18,7 @@ import {
   FileText,
 } from "lucide-react";
 import { Workspace, PageHeading } from "./shell";
-import { useApp } from "./provider";
+import { useApp, request } from "./provider";
 import { FigmaSuccessModal } from "./ScallopedBadge";
 
 function formatEventDate(dateStr?: string) {
@@ -101,16 +101,10 @@ export function AdminEmailsPage() {
 
     setSendingTask(true);
     try {
-      const res = await fetch("/api/admin/send-task-announcement", {
+      const resData = await request("admin/send-task-announcement", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ targetAudience: taskAudience }),
       });
-
-      const resData = await res.json();
-      if (!res.ok) {
-        throw new Error(resData.error || "Failed to dispatch task announcement email.");
-      }
 
       showNotification(
         "success",
@@ -154,20 +148,14 @@ export function AdminEmailsPage() {
 
     setSendingNotice(true);
     try {
-      const res = await fetch("/api/admin/send-notice", {
+      const resData = await request("admin/send-notice", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject: noticeSubject,
           message: noticeMessage,
           targetAudience: noticeAudience,
         }),
       });
-
-      const resData = await res.json();
-      if (!res.ok) {
-        throw new Error(resData.error || "Failed to send broadcast notice.");
-      }
 
       showNotification(
         "success",
@@ -205,15 +193,9 @@ export function AdminEmailsPage() {
 
     setSendingResults(true);
     try {
-      const res = await fetch("/api/admin/send-results-email", {
+      const resData = await request("admin/send-results-email", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
       });
-
-      const resData = await res.json();
-      if (!res.ok) {
-        throw new Error(resData.error || "Failed to dispatch results email.");
-      }
 
       showNotification(
         "success",
@@ -410,6 +392,7 @@ export function AdminEmailsPage() {
               <button
                 type="submit"
                 disabled={sendingTask}
+                style={{ backgroundColor: "#4f46e5", color: "#ffffff" }}
                 className="w-full sm:w-auto h-11 px-6 inline-flex items-center justify-center gap-2 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-600 dark:hover:bg-indigo-500 rounded-[6px] shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {sendingTask ? (
@@ -566,6 +549,7 @@ export function AdminEmailsPage() {
               <button
                 type="submit"
                 disabled={sendingNotice}
+                style={{ backgroundColor: "#2563eb", color: "#ffffff" }}
                 className="h-10 px-6 inline-flex items-center gap-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-500 rounded-[6px] shadow-xs transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {sendingNotice ? (
@@ -629,6 +613,7 @@ export function AdminEmailsPage() {
               type="button"
               onClick={handleSendResults}
               disabled={sendingResults || !settings.results_published}
+              style={{ backgroundColor: "#d97706", color: "#ffffff" }}
               className="h-10 px-5 inline-flex items-center gap-2 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-[6px] shadow-xs transition-colors disabled:opacity-50 cursor-pointer shrink-0"
             >
               {sendingResults ? (

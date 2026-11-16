@@ -34,6 +34,7 @@ export async function request(path: string, options: RequestInit = {}) {
 
   const response = await fetch(`/api/${path}`, {
     ...options,
+    credentials: "include",
     headers: { ...baseHeaders, ...options.headers },
   });
   const payload = await response.json();
