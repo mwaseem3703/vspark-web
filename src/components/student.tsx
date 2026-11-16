@@ -1,48 +1,50 @@
 "use client";
-import Link from "next/link";
-import { useEffect, useRef, useState, type InputHTMLAttributes } from "react";
 import {
-  ArrowUpRight,
-  ArrowRight,
-  CalendarDays,
-  Clock3,
-  Code2,
-  FileText,
-  Check,
-  ShieldCheck,
-  Megaphone,
-  Trophy,
-  Github,
-  FolderUp,
-  Upload,
-  X,
-  CircleCheck,
-  LockKeyhole,
-  Download,
-  Info,
-  CheckCircle2,
-  AlertTriangle,
-  FolderSync,
-  GitBranch,
-  ExternalLink,
-  Copy,
-  RefreshCw,
-} from "lucide-react";
-import { useApp, request } from "./provider";
-import { Workspace, PageHeading, StatusBadge, EmptyState } from "./shell";
-import { Button } from "./ui/button";
-import { FigmaSuccessModal } from "./ScallopedBadge";
-import {
-  eventState,
   allowedPath,
+  eventState,
   MAX_FILE_SIZE,
-  MAX_TOTAL_SIZE,
   MAX_FILES,
+  MAX_TOTAL_SIZE,
   validGithub,
 } from "@/lib/competition";
-import { cleanDescriptionText, extractConfigFromDescription } from "@/lib/competition-rules";
-import { dateLabel } from "@/lib/utils";
+import {
+  cleanDescriptionText,
+  extractConfigFromDescription,
+} from "@/lib/competition-rules";
 import type { Submission } from "@/lib/types";
+import { dateLabel } from "@/lib/utils";
+import {
+  AlertTriangle,
+  ArrowRight,
+  ArrowUpRight,
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  CircleCheck,
+  Clock3,
+  Code2,
+  Copy,
+  Download,
+  ExternalLink,
+  FileText,
+  FolderUp,
+  GitBranch,
+  Github,
+  Info,
+  LockKeyhole,
+  Megaphone,
+  RefreshCw,
+  ShieldCheck,
+  Trophy,
+  Upload,
+  X,
+} from "lucide-react";
+import Link from "next/link";
+import { useEffect, useRef, useState, type InputHTMLAttributes } from "react";
+import { request, useApp } from "./provider";
+import { FigmaSuccessModal } from "./ScallopedBadge";
+import { EmptyState, PageHeading, StatusBadge, Workspace } from "./shell";
+import { Button } from "./ui/button";
 
 export function useNow() {
   const [now, setNow] = useState<number | null>(null);
@@ -82,13 +84,18 @@ export function StudentDashboard() {
   const now = useNow();
   const s = data.settings;
   const state = eventState(s, now || Date.now());
-  const submission = data.submissions.find((x) => x.profile_id === data.profile?.id);
+  const submission = data.submissions.find(
+    (x) => x.profile_id === data.profile?.id,
+  );
 
   // 120-minute timer calculation
   const startMs = Date.parse(s.start_time) || Date.now();
   const durationMs = (s.duration_minutes || 120) * 60 * 1000;
   const endMs = Date.parse(s.end_time) || startMs + durationMs;
-  const remainingSecs = Math.max(0, Math.floor((endMs - (now || Date.now())) / 1000));
+  const remainingSecs = Math.max(
+    0,
+    Math.floor((endMs - (now || Date.now())) / 1000),
+  );
   const isAutoFrozen = state !== "open" || remainingSecs <= 0;
 
   return (
@@ -118,7 +125,9 @@ export function StudentDashboard() {
                 Notice
               </span>
             </div>
-            <p className="text-xs mt-1 text-slate-800 leading-relaxed font-medium">{s.announcement}</p>
+            <p className="text-xs mt-1 text-slate-800 leading-relaxed font-medium">
+              {s.announcement}
+            </p>
           </div>
         </div>
       ) : (
@@ -127,7 +136,8 @@ export function StudentDashboard() {
           <div>
             <strong>120-Minute University Web Challenge</strong>
             <p>
-              Build your responsive application, keep source code clean, and submit before the automated freeze clock.
+              Build your responsive application, keep source code clean, and
+              submit before the automated freeze clock.
             </p>
           </div>
           <span className="notice-tag">ANNOUNCEMENT</span>
@@ -165,7 +175,9 @@ export function StudentDashboard() {
           </span>
           <div>
             <span>Your submission</span>
-            <strong>{submission ? "Submitted successfully" : "Not submitted yet"}</strong>
+            <strong>
+              {submission ? "Submitted successfully" : "Not submitted yet"}
+            </strong>
           </div>
         </div>
       </div>
@@ -177,12 +189,19 @@ export function StudentDashboard() {
             <StatusBadge status={state} />
           </div>
           <h2>{s.title}</h2>
-          <p>Your canvas is waiting. Put your ideas, design skills, and code to the test.</p>
+          <p>
+            Your canvas is waiting. Put your ideas, design skills, and code to
+            the test.
+          </p>
 
           <div className="event-details">
             <span>
               <CalendarDays size={16} />
-              {demo ? "Sample event schedule" : s.submission_mode === "closed" ? "Schedule to be announced" : dateLabel(s.start_time)}
+              {demo
+                ? "Sample event schedule"
+                : s.submission_mode === "closed"
+                  ? "Schedule to be announced"
+                  : dateLabel(s.start_time)}
             </span>
             <span>
               <Clock3 size={16} />
@@ -203,7 +222,9 @@ export function StudentDashboard() {
                 <p>
                   Time remaining:{" "}
                   <span className="font-mono font-bold text-blue-600">
-                    {Math.floor(remainingSecs / 3600)}h {Math.floor((remainingSecs % 3600) / 60)}m {remainingSecs % 60}s
+                    {Math.floor(remainingSecs / 3600)}h{" "}
+                    {Math.floor((remainingSecs % 3600) / 60)}m{" "}
+                    {remainingSecs % 60}s
                   </span>
                 </p>
               </div>
@@ -242,12 +263,16 @@ export function StudentDashboard() {
             ) : (
               <Button disabled variant="outline">
                 <LockKeyhole size={15} />
-                {state === "upcoming" ? "Task unlocks when event starts" : "Submission portal locked"}
+                {state === "upcoming"
+                  ? "Task unlocks when event starts"
+                  : "Submission portal locked"}
               </Button>
             )}
             <span>
               <ShieldCheck size={14} />
-              {state === "open" && !isAutoFrozen ? "You’re ready to go" : "We’ll keep you posted"}
+              {state === "open" && !isAutoFrozen
+                ? "You’re ready to go"
+                : "We’ll keep you posted"}
             </span>
           </div>
         </section>
@@ -277,7 +302,9 @@ export function StudentDashboard() {
               <CheckCircle2 size={17} />
               <div>
                 <strong>Clean Folder Upload</strong>
-                <span>Node_modules, .next, and .git are automatically removed.</span>
+                <span>
+                  Node_modules, .next, and .git are automatically removed.
+                </span>
               </div>
             </li>
             <li>
@@ -320,7 +347,9 @@ export function StudentDashboard() {
             <h3>Your name could be up here.</h3>
             <p>The leaderboard is where great work gets its moment.</p>
             <Link href="/results" className="text-link">
-              {s.results_published ? "See the leaderboard" : "View results status"}
+              {s.results_published
+                ? "See the leaderboard"
+                : "View results status"}
               <ArrowRight size={15} />
             </Link>
           </div>
@@ -336,20 +365,20 @@ export function TaskPage() {
   const now = useNow();
   const s = data.settings;
   const state = eventState(s, now || Date.now());
-  const submission = data.submissions.find((x) => x.profile_id === data.profile?.id);
+  const submission = data.submissions.find(
+    (x) => x.profile_id === data.profile?.id,
+  );
 
   // 120-min countdown timer
   const startMs = Date.parse(s.start_time) || Date.now();
   const durationMs = (s.duration_minutes || 120) * 60 * 1000;
   const endMs = Date.parse(s.end_time) || startMs + durationMs;
-  const remainingSecs = Math.max(0, Math.floor((endMs - (now || Date.now())) / 1000));
+  const remainingSecs = Math.max(
+    0,
+    Math.floor((endMs - (now || Date.now())) / 1000),
+  );
   const isTimeExpired = remainingSecs <= 0 && s.submission_mode !== "open";
   const config = extractConfigFromDescription(s.task_description);
-  const isUnlockedByAdmin = Boolean(
-    submission?.unlocked ||
-    config.unlockedSubmissions?.[data.profile?.id || ""] ||
-    config.allowAllResubmissions
-  );
 
   const [files, setFiles] = useState<File[]>([]);
   const [excluded, setExcluded] = useState(0);
@@ -360,7 +389,6 @@ export function TaskPage() {
   const [error, setError] = useState("");
   const [accepted, setAccepted] = useState(false);
   const [done, setDone] = useState(false);
-  const [editMode, setEditMode] = useState(false);
   const picker = useRef<HTMLInputElement>(null);
 
   // Confirmation Modal and Evaluator Collaborator State
@@ -368,7 +396,8 @@ export function TaskPage() {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [hasConfirmedRules, setHasConfirmedRules] = useState(false);
   const [copiedEvaluatorEmail, setCopiedEvaluatorEmail] = useState(false);
-  const EVALUATOR_GITHUB_EMAIL = config.evaluatorEmail || "aliblogspot769@gmail.com";
+  const EVALUATOR_GITHUB_EMAIL =
+    config.evaluatorEmail || "aliblogspot769@gmail.com";
 
   function selectFiles(list: FileList | null) {
     const all = Array.from(list || []);
@@ -379,13 +408,19 @@ export function TaskPage() {
     setFiles([]);
 
     if (good.length > MAX_FILES) {
-      return setError(`Choose at most ${MAX_FILES} source files after filtering.`);
+      return setError(
+        `Choose at most ${MAX_FILES} source files after filtering.`,
+      );
     }
     if (good.some((f) => f.size > MAX_FILE_SIZE)) {
-      return setError("Each source file must be smaller than 3 MB. Remove large media assets.");
+      return setError(
+        "Each source file must be smaller than 3 MB. Remove large media assets.",
+      );
     }
     if (good.reduce((n, f) => n + f.size, 0) > MAX_TOTAL_SIZE) {
-      return setError("Your source folder must be smaller than 100 MB after filtering.");
+      return setError(
+        "Your source folder must be smaller than 100 MB after filtering.",
+      );
     }
     setFiles(good);
   }
@@ -395,10 +430,14 @@ export function TaskPage() {
     setError("");
 
     if (!validGithub(github)) {
-      return setError("Enter a valid public GitHub repository URL (e.g. https://github.com/you/project).");
+      return setError(
+        "Enter a valid public GitHub repository URL (e.g. https://github.com/you/project).",
+      );
     }
     if (!files.length && !driveUrl) {
-      return setError("Please select your clean project folder or provide your Google Drive link.");
+      return setError(
+        "Please select your clean project folder or provide your Google Drive link.",
+      );
     }
     if (!accepted) {
       return setError("Please confirm that this is your own original work.");
@@ -429,7 +468,9 @@ export function TaskPage() {
         };
         update((d) => ({ ...d, submissions: [...d.submissions, entry] }));
         setProgress(100);
-        notify("Demo submission saved in this browser. Files were not uploaded.");
+        notify(
+          "Demo submission saved in this browser. Files were not uploaded.",
+        );
       } else {
         // Direct Folder Submission with Google Drive destination
         let finalDriveUrl = driveUrl || s.google_drive_folder_url || "";
@@ -490,7 +531,7 @@ export function TaskPage() {
     }
   }
 
-  const isFrozen = (state !== "open" || isTimeExpired) && !isUnlockedByAdmin;
+  const isFrozen = state !== "open" || isTimeExpired;
 
   return (
     <Workspace>
@@ -498,35 +539,15 @@ export function TaskPage() {
         eyebrow="IMAGINE. BUILD. GO BEYOND."
         title="Your challenge. Your canvas."
         description="Read the brief, make it yours, and submit clean code before the clock freezes."
-        action={<StatusBadge status={state === "open" && !isFrozen ? "open" : "closed"} />}
+        action={
+          <StatusBadge
+            status={state === "open" && !isFrozen ? "open" : "closed"}
+          />
+        }
       />
 
-      {/* UNLOCKED FOR RESUBMISSION BANNER */}
-      {isUnlockedByAdmin && (
-        <div className="p-4 mb-6 rounded-[2px] bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800/80 flex items-start gap-3 text-emerald-900 dark:text-emerald-200 shadow-xs animate-in fade-in">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <strong className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
-              Workspace Unlocked for Resubmission
-            </strong>
-            <p className="text-xs mt-1 text-emerald-700 dark:text-emerald-300 leading-relaxed">
-              The competition organizers have unlocked your workspace. You have been granted permission to update your GitHub repository and re-upload your project files.
-            </p>
-          </div>
-          {editMode && (
-            <button
-              type="button"
-              onClick={() => setEditMode(false)}
-              className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 hover:underline px-2 py-1 cursor-pointer"
-            >
-              Cancel Edit
-            </button>
-          )}
-        </div>
-      )}
-
       {/* AUTO-FREEZE ALERT WHEN TIME EXPIRED */}
-      {isFrozen && !submission && !isUnlockedByAdmin && (
+      {isFrozen && !submission && (
         <div className="p-4 mb-6 rounded-[2px] bg-red-50 border border-red-200 flex items-start gap-3 text-red-900 shadow-sm animate-in fade-in">
           <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
           <div>
@@ -534,13 +555,14 @@ export function TaskPage() {
               120-Minute Competition Window Ended
             </strong>
             <p className="text-xs mt-1 text-red-700 leading-relaxed">
-              The submission portal has automatically frozen. Submissions are no longer accepted unless an organizer unlocks resubmission for you.
+              The submission portal has automatically frozen. Submissions are no
+              longer accepted.
             </p>
           </div>
         </div>
       )}
 
-      {!editMode && (submission || done) ? (
+      {submission || done ? (
         <section className="card submission-success">
           <span className="success-icon">
             <CircleCheck size={37} />
@@ -560,17 +582,25 @@ export function TaskPage() {
                   <Check size={16} />
                   Submitted {new Date(submission.submitted_at).toLocaleString()}
                 </span>
-                <a className="text-link" href={submission.github_url} target="_blank" rel="noreferrer">
-                  <Github size={17} /> GitHub repository <ArrowUpRight size={14} />
+                <a
+                  className="text-link"
+                  href={submission.github_url}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Github size={17} /> GitHub repository{" "}
+                  <ArrowUpRight size={14} />
                 </a>
-                {submission.drive_folder_url && (
-                  <a className="text-link" href={submission.drive_folder_url} target="_blank" rel="noreferrer">
-                    <FolderSync size={17} /> Google Drive Folder <ArrowUpRight size={14} />
-                  </a>
-                )}
                 {submission.storage_archive_url && (
-                  <a className="text-link" href={submission.storage_archive_url} target="_blank" rel="noreferrer" download>
-                    <Download size={17} /> Project Code Archive (ZIP) <ArrowUpRight size={14} />
+                  <a
+                    className="text-link"
+                    href={submission.storage_archive_url}
+                    target="_blank"
+                    rel="noreferrer"
+                    download
+                  >
+                    <Download size={17} /> Project Code Archive (ZIP){" "}
+                    <ArrowUpRight size={14} />
                   </a>
                 )}
               </div>
@@ -582,7 +612,9 @@ export function TaskPage() {
                     {submission.total_marks}
                     <small>/100</small>
                   </strong>
-                  {submission.admin_feedback && <p>{submission.admin_feedback}</p>}
+                  {submission.admin_feedback && (
+                    <p>{submission.admin_feedback}</p>
+                  )}
                 </div>
               )}
             </>
@@ -594,15 +626,6 @@ export function TaskPage() {
                 View leaderboard <ArrowUpRight size={16} />
               </Link>
             </Button>
-            {isUnlockedByAdmin && (
-              <Button
-                type="button"
-                onClick={() => setEditMode(true)}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold cursor-pointer"
-              >
-                <RefreshCw size={14} /> Re-upload / Update Submission
-              </Button>
-            )}
           </div>
         </section>
       ) : isFrozen ? (
@@ -610,7 +633,7 @@ export function TaskPage() {
           <EmptyState
             icon={LockKeyhole}
             title="The submission window is frozen."
-            description="The 120-minute countdown has expired and submissions are locked. Contact faculty if you require an unlock."
+            description="The 120-minute countdown has expired and submissions are permanently locked."
           >
             <Button asChild variant="outline">
               <Link href="/dashboard">
@@ -643,7 +666,9 @@ export function TaskPage() {
             <div className="info-note">
               <Info size={17} />
               <p>
-                Focus on a complete, working experience. Include setup instructions in your README so the reviewers can test your project.
+                Focus on a complete, working experience. Include setup
+                instructions in your README so the reviewers can test your
+                project.
               </p>
             </div>
           </section>
@@ -655,6 +680,46 @@ export function TaskPage() {
             <p>Your public GitHub repository + clean source files.</p>
 
             <form className="form-stack" onSubmit={handleInitiateSubmit}>
+              {/* Faculty Evaluator Access Info Box */}
+              <div className="p-3 mb-1.5 rounded-[4px] bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-xs">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                    <GitBranch
+                      size={13}
+                      className="text-blue-600 dark:text-blue-400"
+                    />
+                    Faculty Evaluator GitHub Access
+                  </span>
+                  <span className="text-[10px] bg-blue-100 dark:bg-blue-900/70 text-blue-800 dark:text-blue-300 font-semibold px-1.5 py-0.5 rounded">
+                    Collaborator
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 m-0 mb-2 leading-relaxed">
+                  Add this as a collaborator to your GitHub repository
+                </p>
+                <div className="flex items-center justify-between p-2 rounded bg-white dark:bg-[#0b1325] border border-blue-200/90 dark:border-blue-900/50">
+                  <span className="font-mono font-bold text-xs text-blue-700 dark:text-blue-300 select-all">
+                    {EVALUATOR_GITHUB_EMAIL}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(EVALUATOR_GITHUB_EMAIL);
+                      setCopiedEvaluatorEmail(true);
+                      setTimeout(() => setCopiedEvaluatorEmail(false), 2000);
+                    }}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors border border-blue-200 dark:border-blue-800 cursor-pointer"
+                  >
+                    {copiedEvaluatorEmail ? (
+                      <Check size={11} className="text-emerald-600" />
+                    ) : (
+                      <Copy size={11} />
+                    )}
+                    {copiedEvaluatorEmail ? "Copied" : "Copy Email"}
+                  </button>
+                </div>
+              </div>
+
               {/* GitHub Repo */}
               <label>
                 GitHub repository URL <span className="text-red-500">*</span>
@@ -677,7 +742,9 @@ export function TaskPage() {
                 <span className="file-drop folder-drop">
                   <FolderUp size={30} />
                   <strong>
-                    {files.length ? `${files.length} clean source files ready` : "Choose your project folder"}
+                    {files.length
+                      ? `${files.length} clean source files ready`
+                      : "Choose your project folder"}
                   </strong>
                   <span>
                     {files.length
@@ -723,13 +790,16 @@ export function TaskPage() {
                       <Check size={13} />
                     </span>
                   ))}
-                  {files.length > 4 && <small>+ {files.length - 4} more files</small>}
+                  {files.length > 4 && (
+                    <small>+ {files.length - 4} more files</small>
+                  )}
                 </div>
               )}
 
               {/* Optional Direct Drive Link */}
               <label>
-                Google Drive Link <span className="label-hint">Optional backup</span>
+                Google Drive Link{" "}
+                <span className="label-hint">Optional backup</span>
                 <input
                   type="url"
                   placeholder="https://drive.google.com/drive/folders/..."
@@ -742,7 +812,8 @@ export function TaskPage() {
               <div className="upload-note">
                 <ShieldCheck size={16} />
                 <span>
-                  Dependencies, build outputs, environment files, and private keys are automatically stripped.
+                  Dependencies, build outputs, environment files, and private
+                  keys are automatically stripped.
                 </span>
               </div>
 
@@ -754,7 +825,9 @@ export function TaskPage() {
                   required
                   disabled={busy}
                 />
-                <span>I confirm that this submission is my own original work.</span>
+                <span>
+                  I confirm that this submission is my own original work.
+                </span>
               </label>
 
               {busy && (
@@ -834,7 +907,8 @@ export function TaskPage() {
                 <div className="flex justify-between items-center text-slate-600 dark:text-slate-300">
                   <span>Participant:</span>
                   <span className="font-semibold text-slate-800 dark:text-slate-200">
-                    {data.profile?.full_name || "Participant"} ({data.profile?.email})
+                    {data.profile?.full_name || "Participant"} (
+                    {data.profile?.email})
                   </span>
                 </div>
                 <div className="flex flex-col gap-0.5 border-t border-slate-200/60 dark:border-slate-800/80 pt-2">
@@ -847,7 +921,10 @@ export function TaskPage() {
                     rel="noreferrer"
                     className="text-xs font-mono font-medium text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 truncate"
                   >
-                    <GitBranch size={13} className="shrink-0 text-slate-400 dark:text-slate-500" />
+                    <GitBranch
+                      size={13}
+                      className="shrink-0 text-slate-400 dark:text-slate-500"
+                    />
                     <span className="truncate">{github}</span>
                     <ExternalLink size={11} className="shrink-0" />
                   </a>
@@ -868,12 +945,17 @@ export function TaskPage() {
               <div className="p-3.5 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-[2px] space-y-2">
                 <div className="flex items-center justify-between text-blue-900 dark:text-blue-200 font-bold">
                   <span className="flex items-center gap-1.5">
-                    <GitBranch size={13} className="text-blue-600 dark:text-blue-400" />
+                    <GitBranch
+                      size={13}
+                      className="text-blue-600 dark:text-blue-400"
+                    />
                     Faculty Evaluator GitHub Access
                   </span>
                 </div>
                 <p className="text-[11px] text-blue-900 dark:text-blue-200 leading-relaxed">
-                  Please verify that your GitHub repo is <strong>Public</strong>, OR you have added the faculty evaluator email as a collaborator:
+                  Please verify that your GitHub repo is <strong>Public</strong>
+                  , OR you have added the faculty evaluator email as a
+                  collaborator:
                 </p>
                 <div className="flex items-center justify-between bg-white dark:bg-[#0b1325] border border-blue-200 dark:border-blue-900/60 rounded-[2px] p-2 font-mono text-xs">
                   <span className="text-blue-900 dark:text-blue-200 font-semibold truncate select-all">
@@ -890,7 +972,11 @@ export function TaskPage() {
                   >
                     {copiedEvaluatorEmail ? (
                       <>
-                        <Check size={12} className="text-emerald-600 dark:text-emerald-400" /> Copied
+                        <Check
+                          size={12}
+                          className="text-emerald-600 dark:text-emerald-400"
+                        />{" "}
+                        Copied
                       </>
                     ) : (
                       <>
@@ -920,8 +1006,14 @@ export function TaskPage() {
               {/* In-Modal Upload Progress Indicator */}
               {busy && (
                 <div className="p-3 bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 rounded-[2px] flex items-center gap-2.5 text-xs text-blue-900 dark:text-blue-200 animate-pulse">
-                  <RefreshCw size={14} className="animate-spin text-blue-600 dark:text-blue-400 shrink-0" />
-                  <span>Uploading files to storage and recording submission ({progress}%)…</span>
+                  <RefreshCw
+                    size={14}
+                    className="animate-spin text-blue-600 dark:text-blue-400 shrink-0"
+                  />
+                  <span>
+                    Uploading files to storage and recording submission (
+                    {progress}%)…
+                  </span>
                 </div>
               )}
             </div>
@@ -941,7 +1033,8 @@ export function TaskPage() {
                 onClick={executeFinalSubmission}
                 disabled={!hasConfirmedRules || busy}
                 style={{
-                  backgroundColor: !hasConfirmedRules || busy ? "#94a3b8" : "#2563eb",
+                  backgroundColor:
+                    !hasConfirmedRules || busy ? "#94a3b8" : "#2563eb",
                   color: "#ffffff",
                   borderRadius: "2px",
                 }}

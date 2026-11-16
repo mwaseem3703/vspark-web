@@ -27,7 +27,6 @@ import {
   ChevronRight,
   FolderOpen,
   Link2,
-  Unlock,
   Lock,
   RefreshCw,
   Mail,
@@ -111,6 +110,32 @@ export function AdminOverview() {
           </Button>
         }
       />
+      {!demo && data.services?.drive_mode !== "personal" && (
+        <div className="p-4 mb-6 rounded-lg bg-amber-50 dark:bg-amber-950/40 border-2 border-amber-400 dark:border-amber-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <span className="p-2 rounded-full bg-amber-500 text-white shrink-0 mt-0.5">
+              <GoogleDriveIcon size={20} />
+            </span>
+            <div>
+              <strong className="text-sm font-bold text-amber-900 dark:text-amber-200">
+                Action Required: Connect Personal Google Drive (OAuth 2.0)
+              </strong>
+              <p className="text-xs text-amber-800 dark:text-amber-300 mt-0.5 m-0 leading-relaxed">
+                To upload student code files and folders into your Google Drive (15 GB quota), please authorize your Google account once.
+              </p>
+            </div>
+          </div>
+          <Button
+            asChild
+            style={{ backgroundColor: "#2563eb", color: "#ffffff" }}
+            className="h-9 px-4 text-xs font-bold shrink-0 hover:bg-blue-700 cursor-pointer shadow-sm"
+          >
+            <a href="/auth/drive/start">
+              <GoogleDriveIcon size={14} /> Connect Google Drive
+            </a>
+          </Button>
+        </div>
+      )}
       {!demo &&
         data.services &&
         (!data.services.email || !data.services.drive) && (
@@ -304,7 +329,7 @@ export function AdminOverview() {
                               href={s.storage_archive_url}
                               target="_blank"
                               rel="noreferrer"
-                              download
+                              download={`${(s.student_name || "student").replace(/[^a-zA-Z0-9_-]/g, "_")}_vspark_project.zip`}
                               className="icon-link"
                               title="Download Code ZIP"
                             >
@@ -347,9 +372,6 @@ export function StudentsPage() {
   const [perPage, setPerPage] = useState(10);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
-  const [togglingAll, setTogglingAll] = useState(false);
-  const [allowAllResubmissions, setAllowAllResubmissions] = useState(false);
-
   // Direct student email state
   const [directStudent, setDirectStudent] = useState<any | null>(null);
   const [directSubject, setDirectSubject] = useState("");
@@ -439,41 +461,6 @@ export function StudentsPage() {
     }
   };
 
-  const handleToggleAllResubmissions = async () => {
-    setTogglingAll(true);
-    try {
-      const nextState = !allowAllResubmissions;
-      const res = await fetch("/api/admin/toggle-resubmissions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ allowAll: nextState }),
-      });
-      if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Failed to toggle resubmission permissions.");
-      }
-      setAllowAllResubmissions(nextState);
-      setPopupModal({
-        isOpen: true,
-        title: nextState ? "Submissions Unlocked!" : "Submissions Locked!",
-        message: nextState
-          ? "All student participants can now submit or update their projects in the workspace."
-          : "Student submissions have been permanently frozen and locked.",
-        buttonLabel: "Close",
-      });
-      notify(
-        nextState
-          ? "Resubmissions unlocked for all registered students!"
-          : "Submissions locked permanently.",
-      );
-      await refresh();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setTogglingAll(false);
-    }
-  };
-
   const students = data.students.filter(
     (s) =>
       (filter === "all" || s.status === filter) &&
@@ -485,25 +472,17 @@ export function StudentsPage() {
   const totalPages = Math.max(1, Math.ceil(students.length / perPage));
   const paginatedStudents = students.slice((page - 1) * perPage, page * perPage);
 
-  async function review(id: string, status: "approved" | "rejected" | "unlocked") {
+  async function review(id: string, status: "approved" | "rejected") {
     setBusy(id);
     setError("");
     let notice = "";
     try {
       if (demo) {
-        if (status === "unlocked") {
-          update((d) => ({
-            ...d,
-            submissions: d.submissions.filter((sub) => sub.profile_id !== id),
-          }));
-          notice = "Submission unlocked in demo mode.";
-        } else {
-          update((d) => ({
-            ...d,
-            students: d.students.map((s) => (s.id === id ? { ...s, status } : s)),
-            profile: d.profile?.id === id ? { ...d.profile, status } : d.profile,
-          }));
-        }
+        update((d) => ({
+          ...d,
+          students: d.students.map((s) => (s.id === id ? { ...s, status } : s)),
+          profile: d.profile?.id === id ? { ...d.profile, status } : d.profile,
+        }));
       } else {
         const result = await request("admin/students", {
           method: "POST",
@@ -524,13 +503,6 @@ export function StudentsPage() {
           isOpen: true,
           title: "Student Rejected",
           message: "The participant's registration has been rejected.",
-          buttonLabel: "Close",
-        });
-      } else if (status === "unlocked") {
-        setPopupModal({
-          isOpen: true,
-          title: "Submission Unlocked!",
-          message: "The student has been granted permission to resubmit their project.",
           buttonLabel: "Close",
         });
       }
@@ -781,36 +753,6 @@ export function StudentsPage() {
             </div>
           </div>
 
-          <button
-            type="button"
-            disabled={togglingAll}
-            onClick={handleToggleAllResubmissions}
-            className="unlock-all-btn"
-            style={{
-              height: "38px",
-              padding: "0 16px",
-              borderRadius: "8px",
-              fontSize: "12px",
-              fontWeight: 700,
-              backgroundColor: allowAllResubmissions ? "#f59e0b" : undefined,
-              color: allowAllResubmissions ? "#0f172a" : undefined,
-              border: "none",
-              cursor: "pointer",
-              display: "inline-flex",
-              alignItems: "center",
-              gap: "8px",
-              boxShadow: "0 1px 2px rgba(16, 24, 40, 0.05)",
-            }}
-          >
-            {togglingAll ? (
-              <RefreshCw size={14} className="animate-spin" />
-            ) : allowAllResubmissions ? (
-              <Lock size={14} />
-            ) : (
-              <Unlock size={14} />
-            )}
-            <span>{allowAllResubmissions ? "Lock Submissions" : "+ Unlock All Submissions"}</span>
-          </button>
         </div>
 
         {error && (
@@ -952,7 +894,7 @@ export function StudentsPage() {
                               href={sub.storage_archive_url}
                               target="_blank"
                               rel="noreferrer"
-                              download
+                              download={`${(s.full_name || "student").replace(/[^a-zA-Z0-9_-]/g, "_")}_${(s.email || "user").replace(/[^a-zA-Z0-9_@-]/g, "_")}_vspark_project.zip`}
                               title="Download Project Source Code ZIP"
                               className="students-action-btn"
                               style={{
@@ -969,24 +911,6 @@ export function StudentsPage() {
                               <Download size={14} />
                             </a>
                           )}
-                          <button
-                            type="button"
-                            disabled={busy === s.id}
-                            onClick={() => review(s.id, "unlocked")}
-                            title="Unlock workspace / Allow student to resubmit"
-                            className="students-action-btn"
-                            style={{
-                              width: "28px",
-                              height: "28px",
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              borderRadius: "6px",
-                              cursor: "pointer",
-                            }}
-                          >
-                            <Unlock size={13} />
-                          </button>
                         </div>
                       );
                     })()}
@@ -1759,7 +1683,7 @@ export function EvaluationsPage() {
                   href={selected.storage_archive_url}
                   target="_blank"
                   rel="noreferrer"
-                  download
+                  download={`${(selected.student_name || "student").replace(/[^a-zA-Z0-9_-]/g, "_")}_vspark_project.zip`}
                   style={{ display: "inline-flex", alignItems: "center", gap: "5px", fontSize: "11px", fontWeight: 600 }}
                 >
                   <Download size={13} /> Source ZIP <ArrowUpRight size={10} />
@@ -2325,6 +2249,119 @@ export function SettingsPage() {
                   placeholder="e.g. Next.js 15/16, React 19, Tailwind CSS..."
                 />
               </label>
+            </div>
+          </section>
+
+          {/* Google Drive Integration & OAuth Connect Section */}
+          <section className="card settings-card">
+            <div className="settings-section-title">
+              <span className="stat-icon emerald">
+                <GoogleDriveIcon size={20} />
+              </span>
+              <div>
+                <h3>Google Drive Integration &amp; Storage</h3>
+                <p>Connect your personal Google Drive (15 GB) to automatically store student code and folders.</p>
+              </div>
+            </div>
+
+            <div className="form-stack">
+              {/* Status and 1-Click Connect Button */}
+              <div className="p-4 rounded-[6px] bg-slate-50 dark:bg-[#0d1527] border border-slate-200 dark:border-[#1e293b] space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">
+                      OAuth 2.0 Connection Status
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-2.5 h-2.5 rounded-full ${
+                          data.services?.drive_mode === "personal"
+                            ? "bg-emerald-500 animate-pulse"
+                            : "bg-amber-500"
+                        }`}
+                      />
+                      <strong className="text-sm text-slate-900 dark:text-slate-100">
+                        {data.services?.drive_mode === "personal"
+                          ? `Connected: ${data.services?.drive_account_email || "Personal Google Drive (15 GB)"}`
+                          : "Personal Google Drive Not Authorized (Action Needed)"}
+                      </strong>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      onClick={connectDrive}
+                      disabled={connectingDrive}
+                      style={{ backgroundColor: "#2563eb", color: "#ffffff" }}
+                      className="h-10 px-5 text-xs font-bold inline-flex items-center gap-2 rounded-[4px] shadow-sm hover:bg-blue-700 cursor-pointer"
+                    >
+                      {connectingDrive ? (
+                        <RefreshCw size={14} className="animate-spin" />
+                      ) : (
+                        <GoogleDriveIcon size={16} />
+                      )}
+                      <span>
+                        {connectingDrive
+                          ? "Starting Google Sign-In…"
+                          : data.services?.drive_mode === "personal"
+                            ? "Reconnect / Switch Google Account"
+                            : "Connect Google Drive"}
+                      </span>
+                    </Button>
+                    <a
+                      href="/auth/drive/start"
+                      className="text-xs text-blue-600 dark:text-blue-400 underline font-medium hover:text-blue-800"
+                      title="Direct authorization link"
+                    >
+                      (Direct Link)
+                    </a>
+                  </div>
+                </div>
+
+                <p className="text-xs text-slate-500 dark:text-slate-400 m-0 leading-relaxed">
+                  {data.services?.drive_mode === "personal" ? (
+                    <>
+                      ✅ <strong>OAuth 2.0 Active:</strong> Student submissions and source code files are automatically stored using your 15 GB personal Google Drive quota.
+                    </>
+                  ) : (
+                    <>
+                      ⚠️ <strong>OAuth Required:</strong> Google prohibits Service Accounts from uploading files into personal Google Drives (0 bytes quota). Authorize your Google account with OAuth 2.0 so student folders and all project code files upload directly into your Google Drive.
+                    </>
+                  )}
+                </p>
+
+                {driveCheck && (
+                  <div className="p-3 rounded-[4px] bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-xs text-blue-900 dark:text-blue-200 font-medium">
+                    {driveCheck}
+                  </div>
+                )}
+              </div>
+
+              {/* Custom Google Drive Folder URL Input */}
+              <label>
+                Google Drive Destination Folder URL
+                <div className="input-with-button flex items-center gap-2">
+                  <input
+                    type="url"
+                    value={driveUrl}
+                    onChange={(e) => setDriveUrl(e.target.value)}
+                    placeholder="https://drive.google.com/drive/folders/..."
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={checkDrive}
+                    disabled={checkingDrive || !driveUrl.trim()}
+                  >
+                    {checkingDrive ? "Verifying…" : "Verify Access"}
+                  </Button>
+                </div>
+              </label>
+              <p className="control-explanation">
+                All submitted student code folders and zip packages will automatically sync to this folder.
+              </p>
             </div>
           </section>
 

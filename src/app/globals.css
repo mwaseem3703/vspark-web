@@ -5397,26 +5397,6 @@ html[data-theme="dark"] .vspark-logo-dark {
    Figma-Style Admin & Students Management Component Rules (Light & Dark)
    ========================================================================== */
 
-/* Unlock All Submissions Button */
-.unlock-all-btn {
-  background-color: #252d58;
-  color: #ffffff;
-  transition: all 0.15s ease;
-}
-.unlock-all-btn:hover {
-  background-color: #1e2448;
-  color: #ffffff;
-  box-shadow: 0 2px 8px rgba(37, 45, 88, 0.25);
-}
-[data-theme="dark"] .unlock-all-btn {
-  background-color: #2563eb !important;
-  color: #ffffff !important;
-}
-[data-theme="dark"] .unlock-all-btn:hover {
-  background-color: #1d4ed8 !important;
-  color: #ffffff !important;
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45) !important;
-}
 
 /* Students Stats Cards */
 .students-stat-card {
@@ -6357,4 +6337,24 @@ html[data-theme="dark"] .vspark-logo-dark {
   .demo-banner > span:not(.demo-dot) {
     display: none;
   }
+}
+
+/* Explicit Faculty Admin Login Form Overrides */
+.admin-login-input {
+  padding-left: 42px !important;
+  padding-right: 14px !important;
+}
+.admin-password-input {
+  padding-left: 42px !important;
+  padding-right: 44px !important;
+}
+.admin-login-submit-btn {
+  background-color: #2563eb !important;
+  color: #ffffff !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+.admin-login-submit-btn:hover {
+  background-color: #1d4ed8 !important;
 }

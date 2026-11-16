@@ -130,9 +130,8 @@ export async function finishDriveAuthorization(code: string, verifier: string) {
     grant_type: "authorization_code",
   });
   if (
-    !result.refresh_token ||
     !result.access_token ||
-    !result.scope?.split(" ").includes(DRIVE_SCOPE)
+    (!result.refresh_token && !cached)
   )
     throw new Error(
       "Google did not provide offline Drive access. Reconnect and allow the requested file access.",
@@ -172,14 +171,62 @@ export async function finishDriveAuthorization(code: string, verifier: string) {
         appProperties: { vsparkDestination: "competition" },
       }),
     }));
-  const saved = await serviceClient().rpc("connect_personal_drive", {
-    encrypted_refresh_token: encryptDriveToken(result.refresh_token),
-    connected_email: account.user.emailAddress,
-    destination_url: `https://drive.google.com/drive/folders/${folder.id}`,
-  });
-  if (saved.error)
-    throw new Error(
-      "Could not save the Drive connection. Keep submissions closed and retry.",
-    );
+
+  let ciphertext: string;
+  if (result.refresh_token) {
+    ciphertext = encryptDriveToken(result.refresh_token);
+  } else {
+    const { data: existingConn } = await serviceClient()
+      .from("drive_connections")
+      .select("refresh_token_ciphertext")
+      .eq("id", 1)
+      .maybeSingle();
+    if (!existingConn?.refresh_token_ciphertext) {
+      throw new Error("Google did not provide offline Drive access. Reconnect and allow the requested file access.");
+    }
+    ciphertext = existingConn.refresh_token_ciphertext;
+  }
+
+  try {
+    const { error: rpcError } = await serviceClient().rpc("connect_personal_drive", {
+      destination_url: `https://drive.google.com/drive/folders/${folder.id}`,
+      connected_email: account.user?.emailAddress || "connected_user",
+      encrypted_refresh_token: ciphertext,
+    });
+    if (rpcError) throw rpcError;
+  } catch {
+    const { error: saveError } = await serviceClient()
+      .from("drive_connections")
+      .upsert({
+        id: 1,
+        account_email: account.user?.emailAddress || "connected_user",
+        refresh_token_ciphertext: ciphertext,
+        connected_at: new Date().toISOString(),
+      });
+    if (saveError) {
+      console.error("Could not save drive connection:", saveError);
+      throw new Error("Could not save the Drive connection.");
+    }
+
+    const { data: currentSettings } = await serviceClient()
+      .from("competition_settings")
+      .select("google_drive_folder_url")
+      .eq("id", 1)
+      .maybeSingle();
+
+    const folderUrl =
+      currentSettings?.google_drive_folder_url ||
+      `https://drive.google.com/drive/folders/${folder.id}`;
+
+    await serviceClient()
+      .from("competition_settings")
+      .update({
+        google_drive_folder_url: folderUrl,
+        google_drive_verified_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", 1);
+  }
+
   cached = undefined;
 }

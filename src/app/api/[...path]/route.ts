@@ -36,6 +36,7 @@ import {
   verifyDriveFolder,
   findOrCreateStudentFolder,
   clearFolderContents,
+  createDriveShortcutOrMetaFile,
 } from "@/lib/drive";
 import { driveFolderId, canonicalDriveFolder } from "@/lib/drive-folder";
 import {
@@ -50,6 +51,7 @@ import type { Profile, Settings } from "@/lib/types";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
+const folderCreationLocks = new Map<string, Promise<string>>();
 function driveParent(s: Settings) {
   return (
     driveFolderId(s.google_drive_folder_url || "") ||
@@ -883,97 +885,10 @@ async function post(req: NextRequest, path: string) {
     await admin();
     const body = await req.json();
 
-    // 1. Master toggle: Allow all students to resubmit
-    if (body.action === "toggle_all_resubmissions") {
-      const s = await settings();
-      const config = extractConfigFromDescription(s.task_description);
-      const allowAll = Boolean(body.allowAll);
-      config.allowAllResubmissions = allowAll;
-      const newDesc = embedConfigInDescription(s.task_description, config);
-      await db.from("competition_settings").update({ task_description: newDesc }).eq("id", 1);
-      return json({
-        ok: true,
-        allowAllResubmissions: allowAll,
-        message: allowAll
-          ? "Unlocked: All students are now permitted to resubmit their projects."
-          : "Locked: Global resubmissions disabled. Project submissions are frozen.",
-      });
-    }
-
-    // 2. Individual student submission unlock toggle
-    if (body.action === "toggle_submission_unlock") {
-      const studentId = body.studentId || body.id;
-      const unlock = Boolean(body.unlock);
-      const s = await settings();
-      const config = extractConfigFromDescription(s.task_description);
-      config.unlockedSubmissions = config.unlockedSubmissions || {};
-      if (unlock) {
-        config.unlockedSubmissions[studentId] = true;
-        await db.from("submissions").delete().eq("profile_id", studentId);
-        // Send email alert to student informing them that resubmission is allowed
-        (async () => {
-          try {
-            const { data: st } = await db
-              .from("profiles")
-              .select("full_name, email")
-              .eq("id", studentId)
-              .maybeSingle();
-            if (st?.email) {
-              await sendResubmissionUnlockedEmail({
-                to: st.email,
-                studentName: st.full_name || "Participant",
-                competitionTitle: s.title,
-              });
-            }
-          } catch (e) {
-            console.error("Failed to send unlock email:", e);
-          }
-        })();
-      } else {
-        delete config.unlockedSubmissions[studentId];
-      }
-      const newDesc = embedConfigInDescription(s.task_description, config);
-      await db.from("competition_settings").update({ task_description: newDesc }).eq("id", 1);
-      return json({
-        ok: true,
-        unlock,
-        message: unlock ? "Unlocked submission workspace for student." : "Submission locked.",
-      });
-    }
-
-    // 3. Unlock action
+    // Submissions are strictly single-attempt per student
     const studentId = body.id || body.studentId;
-    if (body.action === "unlock" || body.status === "unlocked") {
-      await db.from("submissions").delete().eq("profile_id", studentId);
-      const s = await settings();
-      const config = extractConfigFromDescription(s.task_description);
-      config.unlockedSubmissions = config.unlockedSubmissions || {};
-      config.unlockedSubmissions[studentId] = true;
-      const newDesc = embedConfigInDescription(s.task_description, config);
-      await db.from("competition_settings").update({ task_description: newDesc }).eq("id", 1);
-      // Send email alert to student informing them that resubmission is allowed
-      (async () => {
-        try {
-          const { data: st } = await db
-            .from("profiles")
-            .select("full_name, email")
-            .eq("id", studentId)
-            .maybeSingle();
-          if (st?.email) {
-            await sendResubmissionUnlockedEmail({
-              to: st.email,
-              studentName: st.full_name || "Participant",
-              competitionTitle: s.title,
-            });
-          }
-        } catch (e) {
-          console.error("Failed to send unlock email:", e);
-        }
-      })();
-      return json({ ok: true, notice: "Student workspace unlocked for resubmission." });
-    }
 
-    // 4. Status review (approved / rejected)
+    // Status review (approved / rejected)
     const targetStatus = body.status === "rejected" ? "rejected" : "approved";
     const previous = check(
       await db
@@ -1271,14 +1186,16 @@ async function post(req: NextRequest, path: string) {
       JSON.stringify({
         state: flow.state,
         verifier: flow.verifier,
-        owner: owner!.id,
+        owner: owner?.id || "admin",
         issuedAt: Date.now(),
       }),
       {
         httpOnly: true,
-        secure: true,
+        secure:
+          process.env.NODE_ENV === "production" &&
+          (process.env.NEXT_PUBLIC_SITE_URL?.startsWith("https") ?? false),
         sameSite: "lax",
-        path: "/auth/drive/callback",
+        path: "/",
         maxAge: 600,
       },
     );
@@ -1458,13 +1375,10 @@ async function post(req: NextRequest, path: string) {
         .maybeSingle(),
     );
     if (existingSubmission) {
-      const config = extractConfigFromDescription(uploadSettings.task_description);
-      const isAllowed = Boolean(config.allowAllResubmissions || config.unlockedSubmissions?.[p.id]);
-      if (!isAllowed) {
-        throw new ApiError("You already have a final submission.", 409);
-      }
-      await db.from("submissions").delete().eq("profile_id", p.id);
-      await cleanStudentStorage(p.id);
+      throw new ApiError(
+        "You have already submitted your project. Submissions are final and cannot be resubmitted.",
+        409,
+      );
     }
     let active = check(
       await db
@@ -1512,22 +1426,16 @@ async function post(req: NextRequest, path: string) {
       ) as UploadSession;
     if (!active.drive_folder_id) {
       let id = "";
-      const existingFolderId = driveFolderId(existingSubmission?.drive_folder_url);
-      if (existingFolderId && existingFolderId !== driveParent(uploadSettings)) {
-        id = existingFolderId;
-        await clearFolderContents(id);
-      } else {
-        try {
-          const folderResult = await findOrCreateStudentFolder(
-            `${p.full_name} - ${p.email}`,
-            driveParent(uploadSettings),
-            p.id,
-          );
-          id = folderResult.id;
-        } catch (err) {
-          console.error("Could not create/reuse student folder in Google Drive:", err);
-          id = driveParent(uploadSettings) || "1zHVG2Ja-CqUQaBJ5MCB_FhBrKTZ2nKm-";
-        }
+      try {
+        const folderResult = await findOrCreateStudentFolder(
+          `${p.full_name} - ${p.email}`,
+          driveParent(uploadSettings),
+          p.id,
+        );
+        id = folderResult.id;
+      } catch (err) {
+        console.error("Could not create/reuse student folder in Google Drive:", err);
+        id = driveParent(uploadSettings) || "1zHVG2Ja-CqUQaBJ5MCB_FhBrKTZ2nKm-";
       }
       check(
         await db
@@ -1578,12 +1486,21 @@ async function post(req: NextRequest, path: string) {
       let folderPath = "";
       for (const part of parts.slice(0, -1)) {
         folderPath = folderPath ? `${folderPath}/${part}` : part;
-        if (!Object.hasOwn(upload.folders, folderPath))
-          upload.folders[folderPath] = await createFolder(
-            part,
-            parent,
-            key(`${upload.id}/folder/${folderPath}`),
-          );
+        if (!Object.hasOwn(upload.folders, folderPath)) {
+          const lockKey = `${upload.id}:${folderPath}`;
+          let pFolder = folderCreationLocks.get(lockKey);
+          if (!pFolder) {
+            pFolder = createFolder(
+              part,
+              parent,
+              key(`${upload.id}/folder/${folderPath}`),
+            ).finally(() => {
+              folderCreationLocks.delete(lockKey);
+            });
+            folderCreationLocks.set(lockKey, pFolder);
+          }
+          upload.folders[folderPath] = await pFolder;
+        }
         parent = upload.folders[folderPath];
       }
       id = await ensureDriveFile(
@@ -1632,14 +1549,50 @@ async function post(req: NextRequest, path: string) {
         compression: "DEFLATE",
         compressionOptions: { level: 6 },
       });
-      const archivePath = `archives/${p.id}.zip`;
+      const safeName = (p.full_name || "student").replace(/[^a-zA-Z0-9_-]/g, "_");
+      const safeEmail = (p.email || "user").replace(/[^a-zA-Z0-9_@-]/g, "_");
+      const zipFileName = `${safeName}_${safeEmail}_vspark_project.zip`;
+      const archivePath = `archives/${p.id}/${zipFileName}`;
       const uploadRes = await db.storage.from("submissions").upload(archivePath, zipBuffer, {
         contentType: "application/zip",
         upsert: true,
       });
+      // Also upload to root archive path for backwards compatibility
+      await db.storage.from("submissions").upload(`archives/${p.id}.zip`, zipBuffer, {
+        contentType: "application/zip",
+        upsert: true,
+      }).catch(() => null);
+
       if (!uploadRes.error) {
         const { data: urlData } = db.storage.from("submissions").getPublicUrl(archivePath);
         archivePublicUrl = urlData.publicUrl;
+      }
+
+      // Sync ZIP and direct download reference into student's Google Drive folder
+      if (upload.drive_folder_id) {
+        try {
+          const zipFile = new File([new Uint8Array(zipBuffer)], zipFileName, { type: "application/zip" });
+          await ensureDriveFile(
+            zipFileName,
+            upload.drive_folder_id,
+            key(`${upload.id}/archive/${zipFileName}`),
+            zipFile,
+          );
+        } catch (driveZipErr) {
+          console.warn("Drive direct zip upload notice:", driveZipErr);
+        }
+
+        if (archivePublicUrl) {
+          try {
+            await createDriveShortcutOrMetaFile(
+              `DOWNLOAD_${safeName}_PROJECT_CODE.url`,
+              upload.drive_folder_id,
+              archivePublicUrl,
+            );
+          } catch (shortcutErr) {
+            console.warn("Drive shortcut notice:", shortcutErr);
+          }
+        }
       }
     } catch (zipErr) {
       console.warn("Zip generation notice:", zipErr);

@@ -87,7 +87,7 @@ export function AdminLoginPage() {
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Admin Email
               </label>
-              <div className="relative">
+              <div className="relative flex items-center">
                 <input
                   type="email"
                   value={email}
@@ -95,7 +95,7 @@ export function AdminLoginPage() {
                   required
                   placeholder="admin@vspark.edu"
                   style={{ paddingLeft: "42px", paddingRight: "12px" }}
-                  className="w-full h-10 text-xs bg-white dark:bg-[#0d1527] border border-slate-300 dark:border-[#29364b] rounded-[2px] text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-600 transition-colors"
+                  className="admin-login-input w-full h-10 text-xs bg-white dark:bg-[#0d1527] border border-slate-300 dark:border-[#29364b] rounded-[2px] text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-600 transition-colors !pl-[42px] !pr-[12px]"
                 />
                 <Mail
                   size={15}
@@ -109,7 +109,7 @@ export function AdminLoginPage() {
               <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
                 Password
               </label>
-              <div className="relative">
+              <div className="relative flex items-center">
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
@@ -117,7 +117,7 @@ export function AdminLoginPage() {
                   required
                   placeholder="••••••••••••"
                   style={{ paddingLeft: "42px", paddingRight: "44px" }}
-                  className="w-full h-10 text-xs bg-white dark:bg-[#0d1527] border border-slate-300 dark:border-[#29364b] rounded-[2px] text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-600 transition-colors font-mono"
+                  className="admin-password-input w-full h-10 text-xs bg-white dark:bg-[#0d1527] border border-slate-300 dark:border-[#29364b] rounded-[2px] text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-600 transition-colors font-mono !pl-[42px] !pr-[44px]"
                 />
                 <Lock
                   size={15}
@@ -139,8 +139,8 @@ export function AdminLoginPage() {
             <button
               type="submit"
               disabled={busy}
-              style={{ backgroundColor: "#2563eb", color: "#ffffff" }}
-              className="w-full h-10 inline-flex items-center justify-center text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-[2px] shadow-xs transition-colors disabled:opacity-60 cursor-pointer"
+              style={{ backgroundColor: "#2563eb", color: "#ffffff", border: "1px solid #1d4ed8" }}
+              className="admin-login-submit-btn w-full h-10 inline-flex items-center justify-center text-xs font-semibold !text-white !bg-blue-600 hover:!bg-blue-700 rounded-[2px] shadow-xs transition-colors disabled:opacity-60 cursor-pointer"
             >
               {busy ? "Verifying Credentials..." : "Access Control Center"}
             </button>

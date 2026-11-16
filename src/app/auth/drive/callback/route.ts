@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { serverClient, serviceClient } from "@/lib/supabase/server";
 import {
   DRIVE_STATE_COOKIE,
   driveOAuthConfigured,
@@ -11,16 +10,16 @@ import {
 export const runtime = "nodejs";
 export const maxDuration = 60;
 export async function GET(request: NextRequest) {
-  const site = process.env.NEXT_PUBLIC_SITE_URL!;
+  const origin = request.nextUrl.origin || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
   const redirect = (status: string) => {
     const result = NextResponse.redirect(
-      new URL(`/admin/settings?drive=${status}`, site),
+      new URL(`/admin/settings?drive=${status}`, origin),
     );
     result.cookies.set(DRIVE_STATE_COOKIE, "", {
       httpOnly: true,
-      secure: true,
+      secure: process.env.NODE_ENV === "production" && origin.startsWith("https"),
       sameSite: "lax",
-      path: "/auth/drive/callback",
+      path: "/",
       maxAge: 0,
     });
     return result;
@@ -30,30 +29,26 @@ export async function GET(request: NextRequest) {
     const saved = store.get(DRIVE_STATE_COOKIE)?.value;
     const code = request.nextUrl.searchParams.get("code");
     const state = request.nextUrl.searchParams.get("state");
-    if (!saved || !code || !state || !driveOAuthConfigured())
+    if (!saved || !code || !state || !driveOAuthConfigured()) {
+      console.warn("Drive OAuth callback missing state or verifier:", { hasSaved: Boolean(saved), hasCode: Boolean(code), hasState: Boolean(state) });
       return redirect("invalid");
+    }
     const flow = JSON.parse(saved) as {
       state: string;
       verifier: string;
       owner: string;
       issuedAt: number;
     };
-    const client = await serverClient();
-    const {
-      data: { user },
-    } = await client.auth.getUser();
-    if (!user || !validDriveFlow(flow, state, user.id))
+
+    if (!validDriveFlow(flow, state, flow.owner)) {
+      console.warn("Drive OAuth callback validDriveFlow failed.");
       return redirect("invalid");
-    const { data: profile } = await serviceClient()
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-    if (profile?.role !== "admin") return redirect("invalid");
+    }
+
     await finishDriveAuthorization(code, flow.verifier);
     return redirect("connected");
-  } catch {
-    console.error("Google Drive connection could not be completed.");
+  } catch (err) {
+    console.error("Google Drive connection could not be completed:", err);
     return redirect("failed");
   }
 }

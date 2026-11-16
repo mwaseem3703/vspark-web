@@ -47,15 +47,48 @@ async function driveFetch(url: string, init: RequestInit = {}) {
     signal: AbortSignal.timeout(18000),
   });
   if (!result.ok) {
-    console.error("Drive request failed with status", result.status);
+    let errorDetail = "";
+    try {
+      const errJson = await result.json();
+      errorDetail = errJson?.error?.message || "";
+    } catch {}
+    console.error("Drive request failed with status", result.status, errorDetail);
+    if (result.status === 403 && errorDetail.includes("storage quota")) {
+      throw new Error(
+        "Service Accounts do not have storage quota in personal Google Drive. Move the folder to a Google Workspace Shared Drive or connect Google Drive via OAuth.",
+      );
+    }
     throw new Error(
-      "Google Drive could not access this folder. Use the VSpark folder created by Connect Google Drive, or check Shared Drive permissions.",
+      errorDetail ||
+        "Google Drive could not access this folder. Use the VSpark folder created by Connect Google Drive, or check Shared Drive permissions.",
     );
   }
   return result.json();
 }
 export async function createFolder(name: string, parent: string, key: string) {
   return ensureDriveFile(name, parent, key, undefined);
+}
+
+export async function createDriveShortcutOrMetaFile(
+  name: string,
+  parent: string,
+  linkUrl: string,
+): Promise<string> {
+  const metadata = {
+    name,
+    parents: [parent],
+    description: `Complete Source Code Download Link: ${linkUrl}`,
+    mimeType: "text/plain",
+  };
+  const result = await driveFetch(
+    `${BASE}?supportsAllDrives=true&fields=id`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(metadata),
+    },
+  );
+  return result.id;
 }
 
 export async function clearFolderContents(folderId: string) {
@@ -83,12 +116,14 @@ export async function findOrCreateStudentFolder(
   parent: string,
   studentId: string,
 ): Promise<{ id: string; isExisting: boolean }> {
+  const safeParent = parent.replaceAll("'", "\\'");
+  const safeName = name.replaceAll("'", "\\'");
+
+  // 1. Search by folder name first under parent
   try {
-    const safeParent = parent.replaceAll("'", "\\'");
-    const safeName = name.replaceAll("'", "\\'");
-    const q = `'${safeParent}' in parents and trashed = false and (name = '${safeName}' or appProperties has { key='studentId' and value='${studentId}' }) and mimeType = 'application/vnd.google-apps.folder'`;
+    const qName = `'${safeParent}' in parents and trashed = false and name = '${safeName}' and mimeType = 'application/vnd.google-apps.folder'`;
     const found = await driveFetch(
-      `${BASE}?supportsAllDrives=true&includeItemsFromAllDrives=true&q=${encodeURIComponent(q)}&fields=files(id,name)&pageSize=1`,
+      `${BASE}?supportsAllDrives=true&includeItemsFromAllDrives=true&q=${encodeURIComponent(qName)}&fields=files(id,name)&pageSize=1`,
     );
     if (found.files?.length) {
       const existingId = found.files[0].id;
@@ -96,9 +131,25 @@ export async function findOrCreateStudentFolder(
       return { id: existingId, isExisting: true };
     }
   } catch (searchErr) {
-    console.warn("Folder search notice, creating new folder:", searchErr);
+    console.warn("Folder search by name notice:", searchErr);
   }
 
+  // 2. Fallback: Search by studentId appProperty
+  try {
+    const qProp = `'${safeParent}' in parents and trashed = false and appProperties has { key='studentId' and value='${studentId}' } and mimeType = 'application/vnd.google-apps.folder'`;
+    const found = await driveFetch(
+      `${BASE}?supportsAllDrives=true&includeItemsFromAllDrives=true&q=${encodeURIComponent(qProp)}&fields=files(id,name)&pageSize=1`,
+    );
+    if (found.files?.length) {
+      const existingId = found.files[0].id;
+      await clearFolderContents(existingId);
+      return { id: existingId, isExisting: true };
+    }
+  } catch (searchErr2) {
+    console.warn("Folder search by studentId notice:", searchErr2);
+  }
+
+  // 3. No existing folder found, create a new one
   const metadata = {
     name,
     parents: [parent],
@@ -121,12 +172,34 @@ export async function ensureDriveFile(
   key: string,
   file?: File,
 ): Promise<string> {
-  // An appProperties key makes retried file requests idempotent, even after a database timeout.
-  const q = `'${parent.replaceAll("'", "\\'")}' in parents and trashed = false and appProperties has { key='uploadKey' and value='${key}' }`;
-  const found = await driveFetch(
-    `${BASE}?supportsAllDrives=true&includeItemsFromAllDrives=true&q=${encodeURIComponent(q)}&fields=files(id)&pageSize=1`,
-  );
-  if (found.files?.length) return found.files[0].id;
+  const safeParent = parent.replaceAll("'", "\\'");
+  const safeKey = key.replaceAll("'", "\\'");
+  const safeName = name.replaceAll("'", "\\'");
+
+  // 1. Search by uploadKey for idempotency
+  try {
+    const q = `'${safeParent}' in parents and trashed = false and appProperties has { key='uploadKey' and value='${safeKey}' }`;
+    const found = await driveFetch(
+      `${BASE}?supportsAllDrives=true&includeItemsFromAllDrives=true&q=${encodeURIComponent(q)}&fields=files(id)&pageSize=1`,
+    );
+    if (found.files?.length) return found.files[0].id;
+  } catch (err) {
+    console.warn("Search by uploadKey error:", err);
+  }
+
+  // 2. If it is a folder, check by name under parent to prevent duplicate subfolders from concurrent uploads
+  if (!file) {
+    try {
+      const qFolder = `'${safeParent}' in parents and trashed = false and name = '${safeName}' and mimeType = 'application/vnd.google-apps.folder'`;
+      const foundFolder = await driveFetch(
+        `${BASE}?supportsAllDrives=true&includeItemsFromAllDrives=true&q=${encodeURIComponent(qFolder)}&fields=files(id)&pageSize=1`,
+      );
+      if (foundFolder.files?.length) return foundFolder.files[0].id;
+    } catch (err) {
+      console.warn("Search folder by name error:", err);
+    }
+  }
+
   const metadata = {
     name,
     parents: [parent],

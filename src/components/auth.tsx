@@ -19,6 +19,8 @@ import {
   MessageCircle,
   Send,
   RefreshCw,
+  Copy,
+  CreditCard,
 } from "lucide-react";
 import { Logo, PublicShell } from "./shell";
 import { useApp, request } from "./provider";
@@ -88,7 +90,21 @@ export function AuthPage({ register = false }: { register?: boolean }) {
     }
   };
 
+  const [copiedAccount, setCopiedAccount] = useState(false);
+  const copyToClipboard = (text: string) => {
+    if (!text) return;
+    navigator.clipboard?.writeText(text);
+    setCopiedAccount(true);
+    setTimeout(() => setCopiedAccount(false), 2000);
+  };
+
   const config = extractConfigFromDescription(data?.settings?.task_description);
+  const bankName = config.bankName || data?.settings?.bank_name || "Easypaisa / HBL";
+  const accountTitle = config.accountTitle || data?.settings?.bank_title || "COMSATS Web Society";
+  const accountNumber = config.accountNumber || data?.settings?.bank_account || "0123 4567 8901 23";
+  const bankIban = data?.settings?.bank_iban || "";
+  const feeAmount = config.feeAmount || data?.settings?.fee_amount || "Rs. 500";
+
   const techPills = (config.allowedTechStack || "Next.js 15/16, React 19, Tailwind CSS, TypeScript, Supabase, Node.js, Vercel")
     .split(",")
     .map((s) => s.trim())
@@ -266,6 +282,57 @@ export function AuthPage({ register = false }: { register?: boolean }) {
                   ))}
                 </div>
               </div>
+
+              {/* CARD 4: REGISTRATION FEE & BANK ACCOUNT DETAILS */}
+              <div className="p-4 rounded-[2px] bg-gradient-to-br from-emerald-50/70 to-blue-50/70 dark:from-[#0d1e1c] dark:to-[#0d172a] border border-emerald-200/90 dark:border-emerald-800/60 shadow-xs">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-[2px] bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
+                      <CreditCard className="w-3.5 h-3.5" />
+                    </span>
+                    <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 tracking-tight">Payment Account Details</h3>
+                  </div>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800">
+                    {feeAmount} Entry Fee
+                  </span>
+                </div>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center justify-between p-2 rounded-[2px] bg-white/90 dark:bg-[#101a2b] border border-slate-200/70 dark:border-[#1e293b]">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Bank / Wallet:</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">{bankName}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-[2px] bg-white/90 dark:bg-[#101a2b] border border-slate-200/70 dark:border-[#1e293b]">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Account Title:</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">{accountTitle}</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2 rounded-[2px] bg-white/90 dark:bg-[#101a2b] border border-slate-200/70 dark:border-[#1e293b]">
+                    <div className="flex flex-col">
+                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Account Number:</span>
+                      <span className="font-mono font-bold text-xs text-blue-700 dark:text-blue-400 tracking-wide">{accountNumber}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(accountNumber)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[2px] text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors cursor-pointer"
+                      title="Copy account number"
+                    >
+                      {copiedAccount ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                      {copiedAccount ? "Copied!" : "Copy"}
+                    </button>
+                  </div>
+                  {bankIban && (
+                    <div className="flex items-center justify-between p-2 rounded-[2px] bg-white/90 dark:bg-[#101a2b] border border-slate-200/70 dark:border-[#1e293b]">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">IBAN:</span>
+                      <span className="font-mono text-[11px] font-semibold text-slate-800 dark:text-slate-200">{bankIban}</span>
+                    </div>
+                  )}
+                </div>
+
+                <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-2.5 leading-snug">
+                  Transfer the registration fee to the official account above and attach your payment receipt on the right to complete registration.
+                </p>
+              </div>
             </div>
           )}
 
@@ -402,6 +469,35 @@ export function AuthPage({ register = false }: { register?: boolean }) {
                 >
                   Forgot Password?
                 </button>
+              </div>
+            )}
+            {register && (
+              <div className="p-3 mb-1.5 rounded-[4px] bg-slate-50 dark:bg-[#0d1527] border border-slate-200 dark:border-[#1e293b] space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <CreditCard size={14} className="text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                      Payment Account (<span className="text-emerald-600 dark:text-emerald-400">{feeAmount}</span>)
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                    {bankName}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between bg-white dark:bg-[#101a2b] p-2 rounded border border-slate-200/80 dark:border-slate-800 text-xs">
+                  <div>
+                    <div className="text-[10px] text-slate-400 font-medium">Title: <span className="font-semibold text-slate-700 dark:text-slate-200">{accountTitle}</span></div>
+                    <div className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs tracking-wide">{accountNumber}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(accountNumber)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors border border-blue-200 dark:border-blue-800 cursor-pointer"
+                  >
+                    {copiedAccount ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                    {copiedAccount ? "Copied" : "Copy Account"}
+                  </button>
+                </div>
               </div>
             )}
             {register && (

@@ -177,18 +177,6 @@ export function StudentResultsPage() {
                 <div className="p-4 rounded-[6px] bg-slate-50 dark:bg-[#0d1527] border border-slate-200 dark:border-[#1e293b] space-y-1">
                   <span className="text-slate-500 dark:text-slate-400 font-medium block">Backup Code Archive</span>
                   <div className="pt-1 flex items-center gap-2">
-                    {submission.drive_folder_url && (
-                      <a
-                        href={submission.drive_folder_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[4px] bg-white dark:bg-[#101a2b] border border-slate-300 dark:border-[#29364b] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-[#1e2e4e] dark:hover:text-[#60a5fa]"
-                        title="Google Drive Folder"
-                      >
-                        <GoogleDriveIcon size={14} />
-                        Drive Folder
-                      </a>
-                    )}
                     {submission.storage_archive_url && (
                       <a
                         href={submission.storage_archive_url}

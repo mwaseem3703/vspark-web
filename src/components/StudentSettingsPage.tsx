@@ -201,11 +201,11 @@ export function StudentSettingsPage() {
                   </div>
                 )}
 
-                {(submission.storage_archive_url || submission.drive_folder_url) && (
+                {submission.storage_archive_url && (
                   <div className="flex items-center justify-between pt-1">
                     <span className="text-slate-500 dark:text-slate-400">Source Zip</span>
                     <a
-                      href={submission.storage_archive_url || submission.drive_folder_url}
+                      href={submission.storage_archive_url}
                       target="_blank"
                       rel="noreferrer"
                       download
