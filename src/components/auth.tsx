@@ -164,9 +164,16 @@ export function AuthPage({ register = false }: { register?: boolean }) {
       if (participationType === "team") {
         const teamName = String(form.get("team_name") || "").trim();
         const email1 = String(form.get("email") || "").trim().toLowerCase();
+        const tmName = String(form.get("teammate_name") || "").trim();
         const email2 = String(form.get("teammate_email") || "").trim().toLowerCase();
+        const tmPhone = String(form.get("teammate_phone") || "").trim();
         if (!teamName) {
           setError("Please enter your team name.");
+          setBusy(false);
+          return;
+        }
+        if (!tmName || !email2 || !tmPhone) {
+          setError("Please provide all required details for Member 2 (Teammate).");
           setBusy(false);
           return;
         }
@@ -370,134 +377,173 @@ export function AuthPage({ register = false }: { register?: boolean }) {
     </div>
   );
 
-  // 1. REGISTER PAGE VIEW: WIDE 2-COLUMN FORM WITH GUIDELINES BELOW
+  // 1. REGISTER PAGE VIEW: CLEAN CENTERED FORM WITH DYNAMIC TEAM FIELDS BELOW
   if (register) {
     return (
       <PublicShell>
-        <div className="container max-w-5xl mx-auto py-8 px-4">
-          <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 mb-6 transition-colors font-medium">
-            <ArrowLeft size={14} /> Back to home
-          </Link>
+        <div className="container max-w-4xl mx-auto py-8 px-4">
+          <div className="max-w-xl mx-auto">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 mb-6 transition-colors font-medium"
+            >
+              <ArrowLeft size={14} /> Back to home
+            </Link>
 
-          {/* Registration Form Card */}
-          <section className="bg-white dark:bg-[#101a2b] border border-slate-200/90 dark:border-[#1e293b] rounded-xl p-6 md:p-8 shadow-xs mb-10">
-            <div className="max-w-3xl mb-6">
-              <div className="eyebrow flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 tracking-wider uppercase mb-2">
-                <Sparkles size={14} /> LET’S MAKE IT OFFICIAL · VSPARK 2026
+            {/* Registration Form Card */}
+            <section className="bg-white dark:bg-[#101a2b] border border-slate-200/90 dark:border-[#1e293b] rounded-2xl p-6 sm:p-8 shadow-sm mb-12">
+              <div className="mb-6">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 tracking-wider uppercase mb-1.5">
+                  <Sparkles size={14} /> VSPARK 2026 REGISTRATION
+                </div>
+                <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+                  Web Development Competition
+                </h1>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Fill in your details below to register. Compete individually or with a teammate (Max 2 members).
+                </p>
               </div>
-              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight mb-2">
-                Create Your Competition Account
-              </h1>
-              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
-                Join the VSpark 2026 Web Engineering Challenge. Compete individually or team up with a partner (Max 2 members).
-              </p>
-            </div>
 
-            {/* Participation Mode Switch Toggle */}
-            <div className="grid grid-cols-2 gap-3 p-1.5 bg-slate-100 dark:bg-[#0b1325] rounded-lg max-w-md mb-8 border border-slate-200/80 dark:border-slate-800">
-              <button
-                type="button"
-                onClick={() => {
-                  setParticipationType("individual");
-                  setError("");
-                }}
-                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                  participationType === "individual"
-                    ? "bg-white dark:bg-[#1e293b] text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/60 dark:border-slate-700"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-                }`}
-              >
-                <User size={15} /> Individual (Solo Participant)
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setParticipationType("team");
-                  setError("");
-                }}
-                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                  participationType === "team"
-                    ? "bg-white dark:bg-[#1e293b] text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/60 dark:border-slate-700"
-                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-                }`}
-              >
-                <Users size={15} /> Team (Max 2 Members)
-              </button>
-            </div>
+              {/* Participation Mode Selection */}
+              <div className="mb-6">
+                <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
+                  Participation Type <span className="text-red-500 font-bold leading-none">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2.5 p-1 bg-slate-100 dark:bg-[#0c1424] rounded-lg border border-slate-200 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setParticipationType("individual");
+                      setError("");
+                    }}
+                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                      participationType === "individual"
+                        ? "bg-white dark:bg-[#1e293b] text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/60 dark:border-slate-700"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                    }`}
+                  >
+                    <User size={15} /> Individual (Solo)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setParticipationType("team");
+                      setError("");
+                    }}
+                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                      participationType === "team"
+                        ? "bg-white dark:bg-[#1e293b] text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/60 dark:border-slate-700"
+                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                    }`}
+                  >
+                    <Users size={15} /> Team (Max 2 Members)
+                  </button>
+                </div>
+              </div>
 
-            {registrationPending && (
-              <p className="info-note mb-6" role="status">
-                Registration is opening soon. Please check back after the organizer’s announcement.
-              </p>
-            )}
+              {registrationPending && (
+                <p className="info-note mb-6" role="status">
+                  Registration is opening soon. Please check back after the organizer’s announcement.
+                </p>
+              )}
 
-            <form onSubmit={submit} className="space-y-6">
-              <input type="hidden" name="participation_type" value={participationType} />
+              <form onSubmit={submit} className="space-y-4">
+                <input type="hidden" name="participation_type" value={participationType} />
 
-              {/* IF INDIVIDUAL: 2-COLUMN FORM */}
-              {participationType === "individual" ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {/* TEAM NAME (Only when Team is selected) */}
+                {participationType === "team" && (
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                      Full Name <span className="text-red-500">*</span>
+                    <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Team Name <span className="text-red-500 font-bold leading-none">*</span>
                     </label>
                     <input
-                      name="full_name"
-                      placeholder="e.g. Muhammad Ali"
-                      required
+                      name="team_name"
+                      placeholder="e.g. CodeWarriors, DevCraft"
+                      required={participationType === "team"}
                       maxLength={100}
-                      autoComplete="name"
-                      className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                      className="w-full h-10 px-3 text-xs rounded-md border border-blue-200 dark:border-blue-900/60 bg-blue-50/30 dark:bg-[#0c1424] text-slate-900 dark:text-slate-100 font-medium focus:outline-none focus:border-blue-500"
                     />
                   </div>
+                )}
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                      Email Address <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      name="email"
-                      placeholder="student@university.edu"
-                      required
-                      type="email"
-                      autoComplete="email"
-                      maxLength={254}
-                      className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                    />
+                {/* SECTION 1: PARTICIPANT / TEAM LEADER DETAILS */}
+                {participationType === "team" && (
+                  <div className="flex items-center justify-between pt-2 pb-1 border-b border-slate-200 dark:border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[10px]">
+                        1
+                      </span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                        Member 1 (Team Leader)
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900">
+                      Submitter
+                    </span>
                   </div>
+                )}
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                      Phone Number <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      name="phone_no"
-                      placeholder="03001234567 or +92 300 1234567"
-                      type="tel"
-                      required
-                      pattern="[0-9+\s]{8,20}"
-                      autoComplete="tel"
-                      className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
+                <div>
+                  <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    {participationType === "team" ? "Leader Full Name" : "Full Name"} <span className="text-red-500 font-bold leading-none">*</span>
+                  </label>
+                  <input
+                    name="full_name"
+                    placeholder="e.g. Muhammad Ali"
+                    required
+                    maxLength={100}
+                    autoComplete="name"
+                    className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                      University Name <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      name="university_name"
-                      placeholder="e.g. COMSATS University Islamabad, Vehari Campus"
-                      required
-                      maxLength={150}
-                      autoComplete="organization"
-                      className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
+                <div>
+                  <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    {participationType === "team" ? "Leader Email Address" : "Email Address"} <span className="text-red-500 font-bold leading-none">*</span>
+                  </label>
+                  <input
+                    name="email"
+                    placeholder="student@university.edu"
+                    required
+                    type="email"
+                    autoComplete="email"
+                    maxLength={254}
+                    className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
 
+                <div>
+                  <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    {participationType === "team" ? "Leader Phone Number" : "Phone Number"} <span className="text-red-500 font-bold leading-none">*</span>
+                  </label>
+                  <input
+                    name="phone_no"
+                    placeholder="0300 1234567"
+                    type="tel"
+                    required
+                    autoComplete="tel"
+                    className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                    University Name <span className="text-red-500 font-bold leading-none">*</span>
+                  </label>
+                  <input
+                    name="university_name"
+                    placeholder="e.g. COMSATS University Islamabad, Vehari Campus"
+                    required
+                    maxLength={150}
+                    autoComplete="organization"
+                    className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                      Department <span className="text-red-500">*</span>
+                    <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Department <span className="text-red-500 font-bold leading-none">*</span>
                     </label>
                     <select
                       name="department"
@@ -510,10 +556,9 @@ export function AuthPage({ register = false }: { register?: boolean }) {
                       ))}
                     </select>
                   </div>
-
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                      Semester <span className="text-red-500">*</span>
+                    <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Semester <span className="text-red-500 font-bold leading-none">*</span>
                     </label>
                     <select
                       name="semester"
@@ -526,10 +571,108 @@ export function AuthPage({ register = false }: { register?: boolean }) {
                       ))}
                     </select>
                   </div>
+                </div>
 
+                {/* SECTION 2: MEMBER 2 (TEAMMATE) DETAILS (SHOWS UNDERNEATH ONLY WHEN TEAM IS SELECTED) */}
+                {participationType === "team" && (
+                  <div className="p-4 sm:p-5 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200/80 dark:border-purple-900/50 space-y-3.5 mt-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-purple-200/60 dark:border-purple-900/40">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-[10px]">
+                          2
+                        </span>
+                        <strong className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                          Member 2 (Teammate Details)
+                        </strong>
+                      </div>
+                      <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/60 px-2 py-0.5 rounded">
+                        View-only Member
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Your teammate will receive their own login access and confirmation email.
+                    </p>
+
+                    <div>
+                      <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Teammate Full Name <span className="text-red-500 font-bold leading-none">*</span>
+                      </label>
+                      <input
+                        name="teammate_name"
+                        placeholder="Teammate's full name"
+                        required={participationType === "team"}
+                        maxLength={100}
+                        className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Teammate Email Address <span className="text-red-500 font-bold leading-none">*</span>
+                      </label>
+                      <input
+                        name="teammate_email"
+                        type="email"
+                        placeholder="teammate@university.edu"
+                        required={participationType === "team"}
+                        maxLength={254}
+                        className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                        Teammate Phone Number <span className="text-red-500 font-bold leading-none">*</span>
+                      </label>
+                      <input
+                        name="teammate_phone"
+                        type="tel"
+                        placeholder="0300 1234567"
+                        required={participationType === "team"}
+                        className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                          Department <span className="text-red-500 font-bold leading-none">*</span>
+                        </label>
+                        <select
+                          name="teammate_department"
+                          required={participationType === "team"}
+                          defaultValue="Computer Science"
+                          className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                        >
+                          {DEPARTMENTS.map((d) => (
+                            <option key={d} value={d}>{d}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                          Semester <span className="text-red-500 font-bold leading-none">*</span>
+                        </label>
+                        <select
+                          name="teammate_semester"
+                          required={participationType === "team"}
+                          defaultValue="6th Semester"
+                          className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                        >
+                          {SEMESTERS.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* PASSWORDS */}
+                <div className="space-y-4 pt-2">
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                      Account Password <span className="text-red-500">*</span>
+                    <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      {participationType === "team" ? "Team Account Password" : "Password"} <span className="text-red-500 font-bold leading-none">*</span>
                     </label>
                     <div className="relative">
                       <input
@@ -545,16 +688,22 @@ export function AuthPage({ register = false }: { register?: boolean }) {
                       <button
                         type="button"
                         onClick={() => setShow(!show)}
+                        aria-label={show ? "Hide password" : "Show password"}
                         className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                       >
                         {show ? <EyeOff size={16} /> : <Eye size={16} />}
                       </button>
                     </div>
+                    {participationType === "team" && (
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
+                        Both team members will use their respective emails with this password to log in.
+                      </p>
+                    )}
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                      Confirm Password <span className="text-red-500">*</span>
+                    <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Confirm Password <span className="text-red-500 font-bold leading-none">*</span>
                     </label>
                     <div className="relative">
                       <input
@@ -570,6 +719,7 @@ export function AuthPage({ register = false }: { register?: boolean }) {
                       <button
                         type="button"
                         onClick={() => setShowConfirm(!showConfirm)}
+                        aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
                         className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                       >
                         {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -577,380 +727,112 @@ export function AuthPage({ register = false }: { register?: boolean }) {
                     </div>
                   </div>
                 </div>
-              ) : (
-                /* IF TEAM: 2 MEMBERS SIDE-BY-SIDE */
-                <div className="space-y-6">
-                  {/* Team Name & University Top Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-4 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/70 dark:border-blue-900/40">
-                    <div>
-                      <label className="block text-xs font-bold text-blue-900 dark:text-blue-200 uppercase tracking-wider mb-1.5">
-                        Team Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        name="team_name"
-                        placeholder="e.g. CodeWarriors, ByteCrafters"
-                        required
-                        maxLength={100}
-                        className="w-full h-10 px-3 text-xs rounded-md border border-blue-200 dark:border-blue-900/60 bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 font-semibold focus:outline-none focus:border-blue-500"
-                      />
+
+                {/* PAYMENT ACCOUNT & DEPOSIT SLIP */}
+                <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/50 space-y-3 pt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <CreditCard size={16} className="text-emerald-600 dark:text-emerald-400" />
+                      <strong className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                        Payment Details ({feeAmount} per {participationType === "team" ? "team" : "participant"})
+                      </strong>
                     </div>
-                    <div>
-                      <label className="block text-xs font-bold text-blue-900 dark:text-blue-200 uppercase tracking-wider mb-1.5">
-                        University Name <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        name="university_name"
-                        placeholder="e.g. COMSATS University Islamabad, Vehari Campus"
-                        required
-                        maxLength={150}
-                        className="w-full h-10 px-3 text-xs rounded-md border border-blue-200 dark:border-blue-900/60 bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
+                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200">
+                      {bankName}
+                    </span>
                   </div>
 
-                  {/* 2 Member Columns */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                    {/* MEMBER 1: TEAM LEADER */}
-                    <div className="p-5 rounded-lg border-2 border-blue-500/30 bg-blue-50/20 dark:bg-[#0c1629] space-y-3.5">
-                      <div className="flex items-center justify-between pb-2 border-b border-blue-200/50 dark:border-blue-900/40">
-                        <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
-                            1
-                          </span>
-                          <div>
-                            <strong className="text-xs font-bold text-blue-950 dark:text-blue-100">
-                              Member 1 (Team Leader)
-                            </strong>
-                            <span className="block text-[10px] text-blue-600 dark:text-blue-400">
-                              Submits project source code & GitHub repo
-                            </span>
-                          </div>
-                        </div>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
-                          Submitter
-                        </span>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                          Full Name <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          name="full_name"
-                          placeholder="Leader's full name"
-                          required
-                          maxLength={100}
-                          className="w-full h-9 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                          Email Address <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          name="email"
-                          placeholder="leader@university.edu"
-                          required
-                          type="email"
-                          maxLength={254}
-                          className="w-full h-9 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                          Phone Number <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          name="phone_no"
-                          placeholder="03001234567 or +92 300 1234567"
-                          type="tel"
-                          required
-                          pattern="[0-9+\s]{8,20}"
-                          className="w-full h-9 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                            Department
-                          </label>
-                          <select
-                            name="department"
-                            defaultValue="Computer Science"
-                            className="w-full h-9 px-2 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                          >
-                            {DEPARTMENTS.map((d) => (
-                              <option key={d} value={d}>{d}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                            Semester
-                          </label>
-                          <select
-                            name="semester"
-                            defaultValue="6th Semester"
-                            className="w-full h-9 px-2 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                          >
-                            {SEMESTERS.map((s) => (
-                              <option key={s} value={s}>{s}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
+                  <div className="flex flex-wrap items-center justify-between gap-3 p-2.5 rounded bg-white dark:bg-[#0d1527] border border-emerald-200/60 dark:border-emerald-900/40 text-xs">
+                    <div>
+                      <div className="text-[10px] text-slate-500">Account Title: <strong className="text-slate-800 dark:text-slate-200">{accountTitle}</strong></div>
+                      <div className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100 mt-0.5">{accountNumber}</div>
                     </div>
-
-                    {/* MEMBER 2: TEAMMATE */}
-                    <div className="p-5 rounded-lg border-2 border-purple-500/30 bg-purple-50/20 dark:bg-[#150d24] space-y-3.5">
-                      <div className="flex items-center justify-between pb-2 border-b border-purple-200/50 dark:border-purple-900/40">
-                        <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-xs">
-                            2
-                          </span>
-                          <div>
-                            <strong className="text-xs font-bold text-purple-950 dark:text-purple-100">
-                              Member 2 (Teammate)
-                            </strong>
-                            <span className="block text-[10px] text-purple-600 dark:text-purple-400">
-                              Can log in to view live workspace, timer & scores
-                            </span>
-                          </div>
-                        </div>
-                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300">
-                          Teammate
-                        </span>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                          Full Name <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          name="teammate_name"
-                          placeholder="Teammate's full name"
-                          required
-                          maxLength={100}
-                          className="w-full h-9 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                          Email Address <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          name="teammate_email"
-                          placeholder="teammate@university.edu"
-                          required
-                          type="email"
-                          maxLength={254}
-                          className="w-full h-9 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                          Phone Number <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          name="teammate_phone"
-                          placeholder="03001234567 or +92 300 1234567"
-                          type="tel"
-                          required
-                          pattern="[0-9+\s]{8,20}"
-                          className="w-full h-9 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                            Department
-                          </label>
-                          <select
-                            name="teammate_department"
-                            defaultValue="Computer Science"
-                            className="w-full h-9 px-2 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                          >
-                            {DEPARTMENTS.map((d) => (
-                              <option key={d} value={d}>{d}</option>
-                            ))}
-                          </select>
-                        </div>
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-                            Semester
-                          </label>
-                          <select
-                            name="teammate_semester"
-                            defaultValue="6th Semester"
-                            className="w-full h-9 px-2 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                          >
-                            {SEMESTERS.map((s) => (
-                              <option key={s} value={s}>{s}</option>
-                            ))}
-                          </select>
-                        </div>
-                      </div>
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => copyToClipboard(accountNumber)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-300 hover:bg-blue-100 transition-colors border border-blue-200 dark:border-blue-800 cursor-pointer"
+                    >
+                      {copiedAccount ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                      {copiedAccount ? "Copied!" : "Copy Account"}
+                    </button>
                   </div>
 
-                  {/* Team Password Row */}
-                  <div className="p-4 rounded-lg bg-slate-50 dark:bg-[#0d1527] border border-slate-200 dark:border-[#1e293b] space-y-3">
-                    <div className="text-xs text-slate-600 dark:text-slate-400">
-                      <strong className="text-slate-900 dark:text-slate-100">Team Login Credentials:</strong> Both Member 1 and Member 2 will be able to log in using their own respective email addresses and the shared password below.
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                          Team Password <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <input
-                            name="password"
-                            type={show ? "text" : "password"}
-                            placeholder="At least 8 characters"
-                            required
-                            minLength={8}
-                            maxLength={128}
-                            className="w-full h-10 px-3 pr-10 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShow(!show)}
-                            className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                          >
-                            {show ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                          Confirm Team Password <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <input
-                            name="confirm_password"
-                            type={showConfirm ? "text" : "password"}
-                            placeholder="Re-enter identical password"
-                            required
-                            minLength={8}
-                            maxLength={128}
-                            className="w-full h-10 px-3 pr-10 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowConfirm(!showConfirm)}
-                            className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                          >
-                            {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
-                      </div>
+                  <div>
+                    <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+                      Deposit Receipt / Screenshot <span className="text-red-500 font-bold leading-none">*</span>
+                      <span className="text-slate-400 lowercase font-normal ml-1">(PNG, JPG, or PDF · max 3 MB)</span>
+                    </label>
+                    <div className="file-drop receipt-drop">
+                      <Upload size={20} />
+                      <strong>{receipt || "Click to attach your deposit slip"}</strong>
+                      <span>PNG, JPG, or PDF · Up to 3 MB</span>
+                      <input
+                        type="file"
+                        name="receipt"
+                        accept="image/png,image/jpeg,application/pdf"
+                        aria-label="Payment deposit receipt"
+                        onChange={(e) => {
+                          const f = e.target.files?.[0];
+                          if (f && f.size > 3 * 1024 * 1024) {
+                            e.target.value = "";
+                            setReceipt("");
+                            setError("Receipt must be smaller than 3 MB.");
+                          } else {
+                            setReceipt(f?.name || "");
+                            setError("");
+                          }
+                        }}
+                      />
                     </div>
                   </div>
                 </div>
-              )}
 
-              {/* PAYMENT ACCOUNT & DEPOSIT SLIP (Shared across both modes) */}
-              <div className="p-4 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/50 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <CreditCard size={16} className="text-emerald-600 dark:text-emerald-400" />
-                    <strong className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                      Payment Account Details ({feeAmount} per {participationType === "team" ? "team" : "participant"})
-                    </strong>
+                {error && (
+                  <div
+                    className="p-3 rounded-md bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs font-medium"
+                    role="alert"
+                  >
+                    {error}
                   </div>
-                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200">
-                    {bankName}
+                )}
+
+                <Button
+                  size="lg"
+                  disabled={busy || registrationPending || (!demo && !ready)}
+                  type="submit"
+                  className="w-full h-11 text-sm font-bold"
+                >
+                  {busy ? (
+                    <>
+                      <span className="spinner mr-2" /> Creating Account…
+                    </>
+                  ) : (
+                    <>
+                      {participationType === "team" ? "Register Team (2 Members)" : "Create Account & Register"}
+                      <ArrowUpRight size={17} className="ml-1" />
+                    </>
+                  )}
+                </Button>
+
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-xs text-slate-500 border-t border-slate-100 dark:border-slate-800">
+                  <span className="flex items-center gap-1.5">
+                    <ShieldCheck size={14} className="text-emerald-600" />
+                    Registrations verified by faculty administration.
+                  </span>
+                  <span>
+                    Already have an account?{" "}
+                    <Link href="/login" className="text-blue-600 font-bold hover:underline">
+                      Log in here &rarr;
+                    </Link>
                   </span>
                 </div>
+              </form>
+            </section>
+          </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 p-2.5 rounded bg-white dark:bg-[#0d1527] border border-emerald-200/60 dark:border-emerald-900/40 text-xs">
-                  <div>
-                    <div className="text-[10px] text-slate-500">Account Title: <strong className="text-slate-800 dark:text-slate-200">{accountTitle}</strong></div>
-                    <div className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100 mt-0.5">{accountNumber}</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(accountNumber)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-300 hover:bg-blue-100 transition-colors border border-blue-200 dark:border-blue-800 cursor-pointer"
-                  >
-                    {copiedAccount ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
-                    {copiedAccount ? "Copied!" : "Copy Account"}
-                  </button>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                    Deposit Receipt / Screenshot <span className="text-slate-400 lowercase font-normal">(PNG, JPG, or PDF · max 3 MB)</span>
-                  </label>
-                  <div className="file-drop receipt-drop">
-                    <Upload size={20} />
-                    <strong>{receipt || "Click to attach your deposit slip"}</strong>
-                    <span>PNG, JPG, or PDF · Up to 3 MB</span>
-                    <input
-                      type="file"
-                      name="receipt"
-                      accept="image/png,image/jpeg,application/pdf"
-                      aria-label="Payment deposit receipt"
-                      onChange={(e) => {
-                        const f = e.target.files?.[0];
-                        if (f && f.size > 3 * 1024 * 1024) {
-                          e.target.value = "";
-                          setReceipt("");
-                          setError("Receipt must be smaller than 3 MB.");
-                        } else {
-                          setReceipt(f?.name || "");
-                          setError("");
-                        }
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {error && (
-                <div className="p-3 rounded-md bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs font-medium" role="alert">
-                  {error}
-                </div>
-              )}
-
-              <Button size="lg" disabled={busy || registrationPending || (!demo && !ready)} type="submit" className="w-full h-11 text-sm font-bold">
-                {busy ? (
-                  <>
-                    <span className="spinner mr-2" /> Creating Account…
-                  </>
-                ) : (
-                  <>
-                    {participationType === "team" ? "Register Team (2 Members)" : "Create Account & Register"}
-                    <ArrowUpRight size={17} className="ml-1" />
-                  </>
-                )}
-              </Button>
-
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-xs text-slate-500 border-t border-slate-100 dark:border-slate-800">
-                <span className="flex items-center gap-1.5">
-                  <ShieldCheck size={14} className="text-emerald-600" />
-                  Registrations verified by faculty administration.
-                </span>
-                <span>
-                  Already have an account?{" "}
-                  <Link href="/login" className="text-blue-600 font-bold hover:underline">
-                    Log in here &rarr;
-                  </Link>
-                </span>
-              </div>
-            </form>
-          </section>
-
-          {/* GUIDELINES & REQUIREMENTS CARDS (NOW MOVED BELOW THE FORM) */}
-          <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
-            <div className="mb-6">
+          {/* GUIDELINES & REQUIREMENTS CARDS (BELOW THE REGISTRATION CARD) */}
+          <div className="pt-8 border-t border-slate-200 dark:border-slate-800">
+            <div className="max-w-xl mx-auto mb-6 text-center">
               <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block">
                 Official Information & Guidelines
               </span>
@@ -968,6 +850,8 @@ export function AuthPage({ register = false }: { register?: boolean }) {
       </PublicShell>
     );
   }
+
+
 
   // 2. LOGIN PAGE VIEW: CLASSIC SPLIT STORY + LOGIN PANEL
   return (
