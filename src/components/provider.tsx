@@ -37,7 +37,20 @@ export async function request(path: string, options: RequestInit = {}) {
     credentials: "include",
     headers: { ...baseHeaders, ...options.headers },
   });
-  const payload = await response.json();
+  let payload: any;
+  const text = await response.text();
+  try {
+    payload = JSON.parse(text);
+  } catch {
+    if (!response.ok) {
+      throw new Error(
+        response.status === 504
+          ? "The server took too long to complete the request (504 Gateway Timeout). Please try again."
+          : `Server error (${response.status}): ${text.slice(0, 150)}`,
+      );
+    }
+    payload = { ok: true, raw: text };
+  }
   if (!response.ok)
     throw new Error(payload.error || "Something went wrong. Please try again.");
   return payload;

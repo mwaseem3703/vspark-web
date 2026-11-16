@@ -41,6 +41,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, type InputHTMLAttributes } from "react";
+import JSZip from "jszip";
 import { request, useApp } from "./provider";
 import { FigmaSuccessModal } from "./ScallopedBadge";
 import { EmptyState, PageHeading, StatusBadge, Workspace } from "./shell";
@@ -506,14 +507,40 @@ export function TaskPage() {
           }
         }
 
-        // Finalize submission
+        // Package ZIP archive in client memory to avoid server 504 timeouts
+        let clientArchiveBlob: Blob | null = null;
+        if (files.length > 0) {
+          try {
+            const zip = new JSZip();
+            for (const f of files) {
+              const relPath = f.webkitRelativePath || f.name;
+              zip.file(relPath, f);
+            }
+            clientArchiveBlob = await zip.generateAsync({
+              type: "blob",
+              compression: "DEFLATE",
+              compressionOptions: { level: 4 },
+            });
+          } catch (zipErr) {
+            console.warn("Client-side zip packaging notice:", zipErr);
+          }
+        }
+
+        // Finalize submission with pre-packaged ZIP
+        const completeForm = new FormData();
+        completeForm.set("session_id", session.id);
+        completeForm.set("github_url", github);
+        completeForm.set("drive_folder_url", finalDriveUrl);
+        if (clientArchiveBlob) {
+          const safeName = (data.profile?.full_name || "student").replace(/[^a-zA-Z0-9_-]/g, "_");
+          const safeEmail = (data.profile?.email || "user").replace(/[^a-zA-Z0-9_@-]/g, "_");
+          const zipFileName = `${safeName}_${safeEmail}_vspark_project.zip`;
+          completeForm.set("archive", clientArchiveBlob, zipFileName);
+        }
+
         await request("upload/complete", {
           method: "POST",
-          body: JSON.stringify({
-            session_id: session.id,
-            github_url: github,
-            drive_folder_url: finalDriveUrl,
-          }),
+          body: completeForm,
         });
 
         setProgress(100);

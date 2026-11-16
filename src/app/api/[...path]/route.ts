@@ -1526,89 +1526,110 @@ async function post(req: NextRequest, path: string) {
   }
   if (path === "upload/complete") {
     const p = await participant();
-    const input = z.object({ session_id: z.uuid() }).parse(await req.json());
-    const upload = await session(input.session_id, p.id);
-    const uploadSettings = await settings();
+    const contentType = req.headers.get("content-type") || "";
+    let sessionId: string;
+    let clientArchiveBuffer: Buffer | null = null;
+    let clientArchiveName = "";
 
-    // Package clean ZIP archive of all uploaded files into Supabase Storage
-    let archivePublicUrl: string | null = null;
-    try {
-      const zip = new JSZip();
-      for (const item of upload.manifest) {
-        const filePath = `projects/${p.id}/${item.path}`;
-        const { data: fileData, error: downloadError } = await db.storage
-          .from("submissions")
-          .download(filePath);
-        if (fileData && !downloadError) {
-          const buffer = Buffer.from(await fileData.arrayBuffer());
-          zip.file(item.path, buffer);
-        }
+    if (contentType.includes("multipart/form-data")) {
+      const form = await req.formData();
+      sessionId = String(form.get("session_id") || "");
+      const archiveFile = form.get("archive");
+      if (archiveFile instanceof File) {
+        clientArchiveBuffer = Buffer.from(await archiveFile.arrayBuffer());
+        clientArchiveName = archiveFile.name;
       }
-      const zipBuffer = await zip.generateAsync({
-        type: "nodebuffer",
-        compression: "DEFLATE",
-        compressionOptions: { level: 6 },
-      });
-      const safeName = (p.full_name || "student").replace(/[^a-zA-Z0-9_-]/g, "_");
-      const safeEmail = (p.email || "user").replace(/[^a-zA-Z0-9_@-]/g, "_");
-      const zipFileName = `${safeName}_${safeEmail}_vspark_project.zip`;
-      const archivePath = `archives/${p.id}/${zipFileName}`;
-      const uploadRes = await db.storage.from("submissions").upload(archivePath, zipBuffer, {
-        contentType: "application/zip",
-        upsert: true,
-      });
-      // Also upload to root archive path for backwards compatibility
-      await db.storage.from("submissions").upload(`archives/${p.id}.zip`, zipBuffer, {
-        contentType: "application/zip",
-        upsert: true,
-      }).catch(() => null);
-
-      if (!uploadRes.error) {
-        const { data: urlData } = db.storage.from("submissions").getPublicUrl(archivePath);
-        archivePublicUrl = urlData.publicUrl;
-      }
-
-      // Sync ZIP and direct download reference into student's Google Drive folder
-      if (upload.drive_folder_id) {
-        try {
-          const zipFile = new File([new Uint8Array(zipBuffer)], zipFileName, { type: "application/zip" });
-          await ensureDriveFile(
-            zipFileName,
-            upload.drive_folder_id,
-            key(`${upload.id}/archive/${zipFileName}`),
-            zipFile,
-          );
-        } catch (driveZipErr) {
-          console.warn("Drive direct zip upload notice:", driveZipErr);
-        }
-
-        if (archivePublicUrl) {
-          try {
-            await createDriveShortcutOrMetaFile(
-              `DOWNLOAD_${safeName}_PROJECT_CODE.url`,
-              upload.drive_folder_id,
-              archivePublicUrl,
-            );
-          } catch (shortcutErr) {
-            console.warn("Drive shortcut notice:", shortcutErr);
-          }
-        }
-      }
-    } catch (zipErr) {
-      console.warn("Zip generation notice:", zipErr);
+    } else {
+      const input = z.object({ session_id: z.uuid() }).parse(await req.json());
+      sessionId = input.session_id;
     }
 
-    // Complete submission record in database
-    await db.rpc("complete_submission", {
-      session_uuid: upload.id,
-      owner_uuid: p.id,
-    });
+    const upload = await session(sessionId, p.id);
+    const uploadSettings = await settings();
 
     const parentId = driveParent(uploadSettings);
     const folderUrl =
       upload.drive_folder_id && upload.drive_folder_id !== parentId
         ? `https://drive.google.com/drive/folders/${upload.drive_folder_id}`
         : uploadSettings.google_drive_folder_url || "https://drive.google.com/drive/folders/1zHVG2Ja-CqUQaBJ5MCB_FhBrKTZ2nKm-";
+
+    // 1. Mark session complete in database
+    await db.rpc("complete_submission", {
+      session_uuid: upload.id,
+      owner_uuid: p.id,
+    });
+
+    const safeName = (p.full_name || "student").replace(/[^a-zA-Z0-9_-]/g, "_");
+    const safeEmail = (p.email || "user").replace(/[^a-zA-Z0-9_@-]/g, "_");
+    const zipFileName = clientArchiveName || `${safeName}_${safeEmail}_vspark_project.zip`;
+    const archivePath = `archives/${p.id}/${zipFileName}`;
+    let archivePublicUrl: string | null = null;
+
+    // 2. Package and persist ZIP archive to Supabase Storage & Google Drive
+    try {
+      let zipBuffer: Buffer | null = clientArchiveBuffer;
+      if (!zipBuffer) {
+        // Fallback: parallel batch download from Supabase Storage
+        const zip = new JSZip();
+        const downloadTasks = upload.manifest.map(async (item) => {
+          try {
+            const filePath = `projects/${p.id}/${item.path}`;
+            const { data: fileData, error: downloadError } = await db.storage
+              .from("submissions")
+              .download(filePath);
+            if (fileData && !downloadError) {
+              zip.file(item.path, Buffer.from(await fileData.arrayBuffer()));
+            }
+          } catch {}
+        });
+        await Promise.all(downloadTasks);
+        zipBuffer = await zip.generateAsync({
+          type: "nodebuffer",
+          compression: "DEFLATE",
+          compressionOptions: { level: 4 },
+        });
+      }
+
+      if (zipBuffer) {
+        const uploadRes = await db.storage.from("submissions").upload(archivePath, zipBuffer, {
+          contentType: "application/zip",
+          upsert: true,
+        });
+        if (!uploadRes.error) {
+          const { data: urlData } = db.storage.from("submissions").getPublicUrl(archivePath);
+          archivePublicUrl = urlData.publicUrl;
+        }
+
+        // Upload ZIP and link to Google Drive folder
+        if (upload.drive_folder_id) {
+          try {
+            const zipFile = new File([new Uint8Array(zipBuffer)], zipFileName, { type: "application/zip" });
+            await ensureDriveFile(
+              zipFileName,
+              upload.drive_folder_id,
+              key(`${upload.id}/archive/${zipFileName}`),
+              zipFile,
+            );
+          } catch (driveZipErr) {
+            console.warn("Drive direct zip upload notice:", driveZipErr);
+          }
+
+          if (archivePublicUrl) {
+            try {
+              await createDriveShortcutOrMetaFile(
+                `DOWNLOAD_${safeName}_PROJECT_CODE.url`,
+                upload.drive_folder_id,
+                archivePublicUrl,
+              );
+            } catch (shortcutErr) {
+              console.warn("Drive shortcut notice:", shortcutErr);
+            }
+          }
+        }
+      }
+    } catch (zipErr) {
+      console.warn("Zip packaging notice:", zipErr);
+    }
 
     await db.from("submissions").upsert({
       profile_id: p.id,
@@ -1617,7 +1638,7 @@ async function post(req: NextRequest, path: string) {
       github_url: upload.github_url,
       drive_folder_url: folderUrl,
       storage_archive_url: archivePublicUrl,
-      submitted_at: new Date().toISOString()
+      submitted_at: new Date().toISOString(),
     }, { onConflict: "profile_id" });
 
     return json({ ok: true, archive_url: archivePublicUrl });

@@ -409,7 +409,7 @@ export function AuthPage({ register = false }: { register?: boolean }) {
                     placeholder="+92 300 1234567"
                     type="tel"
                     required
-                    pattern="\+?[0-9\s()\-]{8,20}"
+                    pattern="[0-9+\s]{8,20}"
                     autoComplete="tel"
                   />
                 </label>
