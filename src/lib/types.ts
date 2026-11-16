@@ -8,6 +8,17 @@ export type Profile = {
   status: "pending" | "approved" | "rejected";
   payment_receipt_url?: string | null;
   created_at: string;
+  participation_type?: "individual" | "team";
+  team_name?: string | null;
+  team_role?: "leader" | "member" | "individual";
+  team_id?: string | null;
+  department?: string | null;
+  semester?: string | null;
+  teammate_name?: string | null;
+  teammate_email?: string | null;
+  teammate_phone?: string | null;
+  teammate_department?: string | null;
+  teammate_semester?: string | null;
 };
 
 export type Settings = {

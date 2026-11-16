@@ -86,7 +86,7 @@ export function StudentDashboard() {
   const s = data.settings;
   const state = eventState(s, now || Date.now());
   const submission = data.submissions.find(
-    (x) => x.profile_id === data.profile?.id,
+    (x) => x.profile_id === data.profile?.id || (data.profile?.team_id && data.submissions.length > 0),
   );
 
   // 120-minute timer calculation
@@ -112,6 +112,39 @@ export function StudentDashboard() {
           </span>
         }
       />
+
+      {/* TEAM PROFILE STATUS BANNER */}
+      {data.profile?.participation_type === "team" && (
+        <div className="p-4 mb-6 rounded-lg bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <span className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
+              👥
+            </span>
+            <div>
+              <div className="flex items-center gap-2">
+                <strong className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                  Team: {data.profile.team_name}
+                </strong>
+                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                  data.profile.team_role === "leader"
+                    ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
+                    : "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
+                }`}>
+                  {data.profile.team_role === "leader" ? "👑 Team Leader (Submitter)" : "👥 Team Member"}
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
+                Teammate: <strong className="text-slate-800 dark:text-slate-200">{data.profile.teammate_name}</strong> ({data.profile.teammate_email}) · {data.profile.department || "CS"} {data.profile.semester ? `· ${data.profile.semester}` : ""}
+              </p>
+            </div>
+          </div>
+          <div className="text-[11px] font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-[#0b1325] px-2.5 py-1 rounded border border-blue-100 dark:border-blue-900/50">
+            {data.profile.team_role === "leader"
+              ? "👑 You have submitter authority"
+              : "👁️ Member view (Leader submits files)"}
+          </div>
+        </div>
+      )}
 
       {/* FACULTY LIVE BROADCAST ANNOUNCEMENT BANNER */}
       {s.announcement ? (
@@ -367,7 +400,7 @@ export function TaskPage() {
   const s = data.settings;
   const state = eventState(s, now || Date.now());
   const submission = data.submissions.find(
-    (x) => x.profile_id === data.profile?.id,
+    (x) => x.profile_id === data.profile?.id || (data.profile?.team_id && data.submissions.length > 0),
   );
 
   // 120-min countdown timer
@@ -700,205 +733,234 @@ export function TaskPage() {
             </div>
           </section>
 
-          {/* RIGHT: THE SUBMISSION FORM */}
-          <section className="card submission-form">
-            <div className="eyebrow">THE FINISH LINE</div>
-            <h2>Make it official.</h2>
-            <p>Your public GitHub repository + clean source files.</p>
-
-            <form className="form-stack" onSubmit={handleInitiateSubmit}>
-              {/* Faculty Evaluator Access Info Box */}
-              <div className="p-3 mb-1.5 rounded-[4px] bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-xs">
-                <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
-                    <GitBranch
-                      size={13}
-                      className="text-blue-600 dark:text-blue-400"
-                    />
-                    Faculty Evaluator GitHub Access
-                  </span>
-                  <span className="text-[10px] bg-blue-100 dark:bg-blue-900/70 text-blue-800 dark:text-blue-300 font-semibold px-1.5 py-0.5 rounded">
-                    Collaborator
-                  </span>
+          {/* RIGHT: THE SUBMISSION FORM OR TEAM MEMBER RESTRICTED VIEW */}
+          {data.profile?.participation_type === "team" && data.profile?.team_role === "member" ? (
+            <section className="card submission-form">
+              <div className="eyebrow">TEAM WORKSPACE</div>
+              <h2>Member View</h2>
+              <div className="p-6 rounded-lg bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-center space-y-3.5 my-3">
+                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 flex items-center justify-center mx-auto text-xl font-bold">
+                  👥
                 </div>
-                <p className="text-[11px] text-slate-600 dark:text-slate-300 m-0 mb-2 leading-relaxed">
-                  Add this as a collaborator to your GitHub repository
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-1">
+                    Team Member: Submission View Only
+                  </h3>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 max-w-sm mx-auto leading-relaxed">
+                    You are registered as a Team Member under <strong className="text-blue-600 dark:text-blue-400">{data.profile.team_name}</strong>.
+                    Per competition guidelines, only your Team Leader (<strong className="text-slate-800 dark:text-slate-200">{data.profile.teammate_name || "Team Leader"}</strong>) has the authority to upload source files and provide the GitHub repository link.
+                  </p>
+                </div>
+                <div className="p-3 bg-white dark:bg-[#0b1325] rounded border border-blue-100 dark:border-blue-900/50 text-xs text-slate-700 dark:text-slate-300 text-left space-y-1">
+                  <div>• <strong>Team:</strong> {data.profile.team_name}</div>
+                  <div>• <strong>Team Leader:</strong> {data.profile.teammate_name} ({data.profile.teammate_email})</div>
+                  <div>• <strong>Submission Status:</strong> Awaiting submission from {data.profile.teammate_name?.split(" ")[0] || "leader"}</div>
+                </div>
+                <p className="text-[11px] text-slate-500 leading-snug">
+                  Once your leader submits the project, your dashboard will automatically refresh with the submission receipt, GitHub repo link, and jury marks.
                 </p>
-                <div className="flex items-center justify-between p-2 rounded bg-white dark:bg-[#0b1325] border border-blue-200/90 dark:border-blue-900/50">
-                  <span className="font-mono font-bold text-xs text-blue-700 dark:text-blue-300 select-all">
-                    {EVALUATOR_GITHUB_EMAIL}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      navigator.clipboard?.writeText(EVALUATOR_GITHUB_EMAIL);
-                      setCopiedEvaluatorEmail(true);
-                      setTimeout(() => setCopiedEvaluatorEmail(false), 2000);
-                    }}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors border border-blue-200 dark:border-blue-800 cursor-pointer"
-                  >
-                    {copiedEvaluatorEmail ? (
-                      <Check size={11} className="text-emerald-600" />
-                    ) : (
-                      <Copy size={11} />
-                    )}
-                    {copiedEvaluatorEmail ? "Copied" : "Copy Email"}
-                  </button>
-                </div>
               </div>
+            </section>
+          ) : (
+            <section className="card submission-form">
+              <div className="eyebrow">THE FINISH LINE</div>
+              <h2>Make it official.</h2>
+              <p>Your public GitHub repository + clean source files.</p>
 
-              {/* GitHub Repo */}
-              <label>
-                GitHub repository URL <span className="text-red-500">*</span>
-                <div className="input-with-icon">
-                  <Github size={17} />
+              <form className="form-stack" onSubmit={handleInitiateSubmit}>
+                {/* Faculty Evaluator Access Info Box */}
+                <div className="p-3 mb-1.5 rounded-[4px] bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-xs">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-bold text-blue-900 dark:text-blue-200 flex items-center gap-1.5 text-[11px] uppercase tracking-wider">
+                      <GitBranch
+                        size={13}
+                        className="text-blue-600 dark:text-blue-400"
+                      />
+                      Faculty Evaluator GitHub Access
+                    </span>
+                    <span className="text-[10px] bg-blue-100 dark:bg-blue-900/70 text-blue-800 dark:text-blue-300 font-semibold px-1.5 py-0.5 rounded">
+                      Collaborator
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-600 dark:text-slate-300 m-0 mb-2 leading-relaxed">
+                    Add this as a collaborator to your GitHub repository
+                  </p>
+                  <div className="flex items-center justify-between p-2 rounded bg-white dark:bg-[#0b1325] border border-blue-200/90 dark:border-blue-900/50">
+                    <span className="font-mono font-bold text-xs text-blue-700 dark:text-blue-300 select-all">
+                      {EVALUATOR_GITHUB_EMAIL}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        navigator.clipboard?.writeText(EVALUATOR_GITHUB_EMAIL);
+                        setCopiedEvaluatorEmail(true);
+                        setTimeout(() => setCopiedEvaluatorEmail(false), 2000);
+                      }}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors border border-blue-200 dark:border-blue-800 cursor-pointer"
+                    >
+                      {copiedEvaluatorEmail ? (
+                        <Check size={11} className="text-emerald-600" />
+                      ) : (
+                        <Copy size={11} />
+                      )}
+                      {copiedEvaluatorEmail ? "Copied" : "Copy Email"}
+                    </button>
+                  </div>
+                </div>
+
+                {/* GitHub Repo */}
+                <label>
+                  GitHub repository URL <span className="text-red-500">*</span>
+                  <div className="input-with-icon">
+                    <Github size={17} />
+                    <input
+                      type="url"
+                      placeholder="https://github.com/your-username/vspark-project"
+                      value={github}
+                      onChange={(e) => setGithub(e.target.value)}
+                      required
+                      disabled={busy}
+                    />
+                  </div>
+                </label>
+
+                {/* Folder Selector */}
+                <label>
+                  Source code folder
+                  <span className="file-drop folder-drop">
+                    <FolderUp size={30} />
+                    <strong>
+                      {files.length
+                        ? `${files.length} clean source files ready`
+                        : "Choose your project folder"}
+                    </strong>
+                    <span>
+                      {files.length
+                        ? `${(files.reduce((n, f) => n + f.size, 0) / 1024 / 1024).toFixed(2)} MB · ${excluded} files (node_modules, .next, .git) excluded automatically`
+                        : "Click to select your source directory · Clean files only"}
+                    </span>
+                    <input
+                      ref={picker}
+                      type="file"
+                      {...({
+                        webkitdirectory: "",
+                        directory: "",
+                      } as InputHTMLAttributes<HTMLInputElement>)}
+                      multiple
+                      onChange={(e) => selectFiles(e.target.files)}
+                      aria-label="Choose project folder"
+                      disabled={busy}
+                    />
+                  </span>
+                </label>
+
+                {/* Selected Files Badge */}
+                {files.length > 0 && (
+                  <div className="selected-files">
+                    <div>
+                      <strong>Ready for Google Drive upload</strong>
+                      <button
+                        type="button"
+                        aria-label="Remove selected folder"
+                        disabled={busy}
+                        onClick={() => {
+                          setFiles([]);
+                          if (picker.current) picker.current.value = "";
+                        }}
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+                    {files.slice(0, 4).map((f) => (
+                      <span key={f.webkitRelativePath || f.name}>
+                        <FileText size={13} />
+                        {f.webkitRelativePath || f.name}
+                        <Check size={13} />
+                      </span>
+                    ))}
+                    {files.length > 4 && (
+                      <small>+ {files.length - 4} more files</small>
+                    )}
+                  </div>
+                )}
+
+                {/* Optional Direct Drive Link */}
+                <label>
+                  Google Drive Link{" "}
+                  <span className="label-hint">Optional backup</span>
                   <input
                     type="url"
-                    placeholder="https://github.com/your-username/vspark-project"
-                    value={github}
-                    onChange={(e) => setGithub(e.target.value)}
+                    placeholder="https://drive.google.com/drive/folders/..."
+                    value={driveUrl}
+                    onChange={(e) => setDriveUrl(e.target.value)}
+                    disabled={busy}
+                  />
+                </label>
+
+                <div className="upload-note">
+                  <ShieldCheck size={16} />
+                  <span>
+                    Dependencies, build outputs, environment files, and private
+                    keys are automatically stripped.
+                  </span>
+                </div>
+
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={accepted}
+                    onChange={(e) => setAccepted(e.target.checked)}
                     required
                     disabled={busy}
                   />
-                </div>
-              </label>
-
-              {/* Folder Selector */}
-              <label>
-                Source code folder
-                <span className="file-drop folder-drop">
-                  <FolderUp size={30} />
-                  <strong>
-                    {files.length
-                      ? `${files.length} clean source files ready`
-                      : "Choose your project folder"}
-                  </strong>
                   <span>
-                    {files.length
-                      ? `${(files.reduce((n, f) => n + f.size, 0) / 1024 / 1024).toFixed(2)} MB · ${excluded} files (node_modules, .next, .git) excluded automatically`
-                      : "Click to select your source directory · Clean files only"}
+                    I confirm that this submission is my own original work.
                   </span>
-                  <input
-                    ref={picker}
-                    type="file"
-                    {...({
-                      webkitdirectory: "",
-                      directory: "",
-                    } as InputHTMLAttributes<HTMLInputElement>)}
-                    multiple
-                    onChange={(e) => selectFiles(e.target.files)}
-                    aria-label="Choose project folder"
-                    disabled={busy}
-                  />
-                </span>
-              </label>
+                </label>
 
-              {/* Selected Files Badge */}
-              {files.length > 0 && (
-                <div className="selected-files">
-                  <div>
-                    <strong>Ready for Google Drive upload</strong>
-                    <button
-                      type="button"
-                      aria-label="Remove selected folder"
-                      disabled={busy}
-                      onClick={() => {
-                        setFiles([]);
-                        if (picker.current) picker.current.value = "";
-                      }}
-                    >
-                      <X size={15} />
-                    </button>
-                  </div>
-                  {files.slice(0, 4).map((f) => (
-                    <span key={f.webkitRelativePath || f.name}>
-                      <FileText size={13} />
-                      {f.webkitRelativePath || f.name}
-                      <Check size={13} />
+                {busy && (
+                  <div
+                    className="upload-progress"
+                    role="progressbar"
+                    aria-valuenow={progress}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  >
+                    <div>
+                      <span>Uploading your project files…</span>
+                      <strong>{progress}%</strong>
+                    </div>
+                    <span>
+                      <i style={{ width: `${progress}%` }} />
                     </span>
-                  ))}
-                  {files.length > 4 && (
-                    <small>+ {files.length - 4} more files</small>
-                  )}
-                </div>
-              )}
-
-              {/* Optional Direct Drive Link */}
-              <label>
-                Google Drive Link{" "}
-                <span className="label-hint">Optional backup</span>
-                <input
-                  type="url"
-                  placeholder="https://drive.google.com/drive/folders/..."
-                  value={driveUrl}
-                  onChange={(e) => setDriveUrl(e.target.value)}
-                  disabled={busy}
-                />
-              </label>
-
-              <div className="upload-note">
-                <ShieldCheck size={16} />
-                <span>
-                  Dependencies, build outputs, environment files, and private
-                  keys are automatically stripped.
-                </span>
-              </div>
-
-              <label className="checkbox-label">
-                <input
-                  type="checkbox"
-                  checked={accepted}
-                  onChange={(e) => setAccepted(e.target.checked)}
-                  required
-                  disabled={busy}
-                />
-                <span>
-                  I confirm that this submission is my own original work.
-                </span>
-              </label>
-
-              {busy && (
-                <div
-                  className="upload-progress"
-                  role="progressbar"
-                  aria-valuenow={progress}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                >
-                  <div>
-                    <span>Uploading your project files…</span>
-                    <strong>{progress}%</strong>
+                    <small>Keep this tab open until the upload completes.</small>
                   </div>
-                  <span>
-                    <i style={{ width: `${progress}%` }} />
-                  </span>
-                  <small>Keep this tab open until the upload completes.</small>
-                </div>
-              )}
-
-              {error && (
-                <p className="error-message" role="alert">
-                  {error}
-                </p>
-              )}
-
-              <Button type="submit" size="lg" disabled={busy}>
-                {busy ? (
-                  <>
-                    <span className="spinner" /> Uploading…
-                  </>
-                ) : (
-                  <>
-                    Review & submit project <ArrowUpRight size={17} />
-                  </>
                 )}
-              </Button>
 
-              <p className="form-footnote">
-                One final submission per participant. Review before submitting.
-              </p>
-            </form>
-          </section>
+                {error && (
+                  <p className="error-message" role="alert">
+                    {error}
+                  </p>
+                )}
+
+                <Button type="submit" size="lg" disabled={busy}>
+                  {busy ? (
+                    <>
+                      <span className="spinner" /> Uploading…
+                    </>
+                  ) : (
+                    <>
+                      Review & submit project <ArrowUpRight size={17} />
+                    </>
+                  )}
+                </Button>
+
+                <p className="form-footnote">
+                  One final submission per participant. Review before submitting.
+                </p>
+              </form>
+            </section>
+          )}
         </div>
       )}
 

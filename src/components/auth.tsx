@@ -21,6 +21,9 @@ import {
   RefreshCw,
   Copy,
   CreditCard,
+  User,
+  Users,
+  UserCheck,
 } from "lucide-react";
 import { Logo, PublicShell } from "./shell";
 import { useApp, request } from "./provider";
@@ -29,6 +32,29 @@ import type { Profile } from "@/lib/types";
 import { OFFICIAL_RUBRIC } from "@/lib/types";
 import { extractConfigFromDescription, renderFormattedText } from "@/lib/competition-rules";
 
+export const DEPARTMENTS = [
+  "Computer Science",
+  "Software Engineering",
+  "Artificial Intelligence",
+  "Information Technology",
+  "Data Science",
+  "Cyber Security",
+  "Electrical / Computer Engineering",
+  "Other",
+];
+
+export const SEMESTERS = [
+  "1st Semester",
+  "2nd Semester",
+  "3rd Semester",
+  "4th Semester",
+  "5th Semester",
+  "6th Semester",
+  "7th Semester",
+  "8th Semester",
+  "Graduated / Alumni",
+];
+
 export function AuthPage({ register = false }: { register?: boolean }) {
   const { demo, data, ready, demoLogin, resetDemo, update, refresh, notify } = useApp();
   const registrationPending = register && !demo && ready && data.services?.email === false;
@@ -36,7 +62,9 @@ export function AuthPage({ register = false }: { register?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [show, setShow] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [receipt, setReceipt] = useState("");
+  const [participationType, setParticipationType] = useState<"individual" | "team">("individual");
 
   useEffect(() => {
     if (!ready || demo) return;
@@ -124,6 +152,32 @@ export function AuthPage({ register = false }: { register?: boolean }) {
     setBusy(true);
     setError("");
     const form = new FormData(e.currentTarget);
+
+    if (register) {
+      const p1 = String(form.get("password") || "");
+      const p2 = String(form.get("confirm_password") || "");
+      if (p1 !== p2) {
+        setError("Passwords do not match. Please ensure both passwords are identical.");
+        setBusy(false);
+        return;
+      }
+      if (participationType === "team") {
+        const teamName = String(form.get("team_name") || "").trim();
+        const email1 = String(form.get("email") || "").trim().toLowerCase();
+        const email2 = String(form.get("teammate_email") || "").trim().toLowerCase();
+        if (!teamName) {
+          setError("Please enter your team name.");
+          setBusy(false);
+          return;
+        }
+        if (email1 === email2) {
+          setError("Team Leader and Teammate cannot have the same email address.");
+          setBusy(false);
+          return;
+        }
+      }
+    }
+
     try {
       if (demo) {
         if (!register) {
@@ -139,6 +193,16 @@ export function AuthPage({ register = false }: { register?: boolean }) {
           role: "student",
           status: "pending",
           created_at: new Date().toISOString(),
+          participation_type: participationType,
+          team_name: participationType === "team" ? String(form.get("team_name")).trim() : null,
+          team_role: participationType === "team" ? "leader" : "individual",
+          department: form.get("department") ? String(form.get("department")) : null,
+          semester: form.get("semester") ? String(form.get("semester")) : null,
+          teammate_name: participationType === "team" ? String(form.get("teammate_name")).trim() : null,
+          teammate_email: participationType === "team" ? String(form.get("teammate_email")).trim().toLowerCase() : null,
+          teammate_phone: participationType === "team" ? String(form.get("teammate_phone")).trim() : null,
+          teammate_department: participationType === "team" ? String(form.get("teammate_department")) : null,
+          teammate_semester: participationType === "team" ? String(form.get("teammate_semester")) : null,
         };
         update((d) => ({ ...d, students: [...d.students, profile], profile }));
         notify("Demo registration created. No email or receipt was uploaded.");
@@ -164,231 +228,797 @@ export function AuthPage({ register = false }: { register?: boolean }) {
     router.push(role === "admin" ? "/admin" : "/dashboard/task");
   }
 
+  // Guidelines & Rubric Cards rendered underneath the registration form
+  const renderGuidelinesCards = () => (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+      {/* CARD 1: PERMITTED TECHNOLOGIES */}
+      <div className="p-5 rounded-lg bg-white dark:bg-[#101a2b] border border-slate-200/90 dark:border-[#1e293b] shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-[2px] bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-xs">
+              <Layers className="w-3.5 h-3.5" />
+            </span>
+            <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 tracking-tight">Permitted Technologies</h3>
+          </div>
+          <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-semibold">
+            Approved Stack
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          {techPills.map((pill, i) => (
+            <span
+              key={i}
+              className="px-2.5 py-1 rounded-[2px] bg-blue-50 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300 text-[11px] font-semibold border border-blue-100/80 dark:border-blue-900/60"
+            >
+              {pill}
+            </span>
+          ))}
+        </div>
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
+          <strong className="text-slate-800 dark:text-slate-200">AI Assistance Allowed:</strong> ChatGPT and Claude are permitted for debugging, syntax, and brainstorming. Full live code defense is required during jury evaluation.
+        </p>
+      </div>
+
+      {/* CARD 2: 100-POINT EVALUATION RUBRIC */}
+      <div className="p-5 rounded-lg bg-white dark:bg-[#101a2b] border border-slate-200/90 dark:border-[#1e293b] shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-[2px] bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+              <Award className="w-3.5 h-3.5" />
+            </span>
+            <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 tracking-tight">Evaluation & Grading Rubric</h3>
+          </div>
+          <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 text-[10px] font-bold">
+            100 Pts Total
+          </span>
+        </div>
+        <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+          {OFFICIAL_RUBRIC.map((item, idx) => (
+            <div
+              key={item.id}
+              className="flex items-center justify-between gap-2 p-1.5 rounded-[2px] bg-slate-50/70 dark:bg-[#0d1527] border border-slate-100 dark:border-[#1e293b] text-[11px]"
+            >
+              <div className="flex items-center gap-2 truncate">
+                <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center shrink-0">
+                  {idx + 1}
+                </span>
+                <span className="text-slate-800 dark:text-slate-200 font-medium truncate">{item.label}</span>
+              </div>
+              <span className="font-bold text-blue-700 dark:text-blue-400 shrink-0">{item.max}m</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* CARD 3: RULES & SUBMISSION FREEZE */}
+      <div className="p-5 rounded-lg bg-white dark:bg-[#101a2b] border border-slate-200/90 dark:border-[#1e293b] shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-[2px] bg-purple-600 text-white flex items-center justify-center font-bold text-xs">
+              <Clock3 className="w-3.5 h-3.5" />
+            </span>
+            <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 tracking-tight">Rules & Submission Freeze</h3>
+          </div>
+          <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 text-[10px] font-bold">
+            120 Mins Clock
+          </span>
+        </div>
+        <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
+          {defaultRulesList.map((rule, idx) => (
+            <div key={idx} className="flex items-start gap-2 text-[11.5px] leading-snug">
+              <span className="w-4 h-4 rounded-full bg-purple-600 text-white text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">
+                {idx + 1}
+              </span>
+              <div className="text-slate-700 dark:text-slate-300">
+                <strong className="text-slate-900 dark:text-slate-100 font-bold">{rule.title}:</strong> {rule.desc}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* CARD 4: REGISTRATION FEE & BANK DETAILS */}
+      <div className="p-5 rounded-lg bg-gradient-to-br from-emerald-50/70 to-blue-50/70 dark:from-[#0d1e1c] dark:to-[#0d172a] border border-emerald-200/90 dark:border-emerald-800/60 shadow-xs space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-6 h-6 rounded-[2px] bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
+              <CreditCard className="w-3.5 h-3.5" />
+            </span>
+            <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 tracking-tight">Payment Account Details</h3>
+          </div>
+          <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800">
+            {feeAmount} Entry Fee
+          </span>
+        </div>
+
+        <div className="space-y-2 text-xs">
+          <div className="flex items-center justify-between p-2 rounded-[2px] bg-white/90 dark:bg-[#101a2b] border border-slate-200/70 dark:border-[#1e293b]">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Bank / Wallet:</span>
+            <span className="font-bold text-slate-900 dark:text-slate-100">{bankName}</span>
+          </div>
+          <div className="flex items-center justify-between p-2 rounded-[2px] bg-white/90 dark:bg-[#101a2b] border border-slate-200/70 dark:border-[#1e293b]">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Account Title:</span>
+            <span className="font-bold text-slate-900 dark:text-slate-100">{accountTitle}</span>
+          </div>
+          <div className="flex items-center justify-between p-2 rounded-[2px] bg-white/90 dark:bg-[#101a2b] border border-slate-200/70 dark:border-[#1e293b]">
+            <div className="flex flex-col">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Account Number:</span>
+              <span className="font-mono font-bold text-xs text-blue-700 dark:text-blue-400 tracking-wide">{accountNumber}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => copyToClipboard(accountNumber)}
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[2px] text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors cursor-pointer"
+              title="Copy account number"
+            >
+              {copiedAccount ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+              {copiedAccount ? "Copied!" : "Copy"}
+            </button>
+          </div>
+          {bankIban && (
+            <div className="flex items-center justify-between p-2 rounded-[2px] bg-white/90 dark:bg-[#101a2b] border border-slate-200/70 dark:border-[#1e293b]">
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">IBAN:</span>
+              <span className="font-mono text-[11px] font-semibold text-slate-800 dark:text-slate-200">{bankIban}</span>
+            </div>
+          )}
+        </div>
+
+        <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-2.5 leading-snug">
+          Transfer the registration fee to the official account above and attach your payment receipt to complete registration.
+        </p>
+      </div>
+    </div>
+  );
+
+  // 1. REGISTER PAGE VIEW: WIDE 2-COLUMN FORM WITH GUIDELINES BELOW
+  if (register) {
+    return (
+      <PublicShell>
+        <div className="container max-w-5xl mx-auto py-8 px-4">
+          <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 mb-6 transition-colors font-medium">
+            <ArrowLeft size={14} /> Back to home
+          </Link>
+
+          {/* Registration Form Card */}
+          <section className="bg-white dark:bg-[#101a2b] border border-slate-200/90 dark:border-[#1e293b] rounded-xl p-6 md:p-8 shadow-xs mb-10">
+            <div className="max-w-3xl mb-6">
+              <div className="eyebrow flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 tracking-wider uppercase mb-2">
+                <Sparkles size={14} /> LET’S MAKE IT OFFICIAL · VSPARK 2026
+              </div>
+              <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight mb-2">
+                Create Your Competition Account
+              </h1>
+              <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                Join the VSpark 2026 Web Engineering Challenge. Compete individually or team up with a partner (Max 2 members).
+              </p>
+            </div>
+
+            {/* Participation Mode Switch Toggle */}
+            <div className="grid grid-cols-2 gap-3 p-1.5 bg-slate-100 dark:bg-[#0b1325] rounded-lg max-w-md mb-8 border border-slate-200/80 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setParticipationType("individual");
+                  setError("");
+                }}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                  participationType === "individual"
+                    ? "bg-white dark:bg-[#1e293b] text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/60 dark:border-slate-700"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                <User size={15} /> Individual (Solo Participant)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setParticipationType("team");
+                  setError("");
+                }}
+                className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                  participationType === "team"
+                    ? "bg-white dark:bg-[#1e293b] text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/60 dark:border-slate-700"
+                    : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
+                }`}
+              >
+                <Users size={15} /> Team (Max 2 Members)
+              </button>
+            </div>
+
+            {registrationPending && (
+              <p className="info-note mb-6" role="status">
+                Registration is opening soon. Please check back after the organizer’s announcement.
+              </p>
+            )}
+
+            <form onSubmit={submit} className="space-y-6">
+              <input type="hidden" name="participation_type" value={participationType} />
+
+              {/* IF INDIVIDUAL: 2-COLUMN FORM */}
+              {participationType === "individual" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Full Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      name="full_name"
+                      placeholder="e.g. Muhammad Ali"
+                      required
+                      maxLength={100}
+                      autoComplete="name"
+                      className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Email Address <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      name="email"
+                      placeholder="student@university.edu"
+                      required
+                      type="email"
+                      autoComplete="email"
+                      maxLength={254}
+                      className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Phone Number <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      name="phone_no"
+                      placeholder="03001234567 or +92 300 1234567"
+                      type="tel"
+                      required
+                      pattern="[0-9+\s]{8,20}"
+                      autoComplete="tel"
+                      className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      University Name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      name="university_name"
+                      placeholder="e.g. COMSATS University Islamabad, Vehari Campus"
+                      required
+                      maxLength={150}
+                      autoComplete="organization"
+                      className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Department <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="department"
+                      required
+                      defaultValue="Computer Science"
+                      className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                    >
+                      {DEPARTMENTS.map((d) => (
+                        <option key={d} value={d}>{d}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Semester <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="semester"
+                      required
+                      defaultValue="6th Semester"
+                      className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                    >
+                      {SEMESTERS.map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Account Password <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        name="password"
+                        type={show ? "text" : "password"}
+                        placeholder="At least 8 characters"
+                        required
+                        minLength={8}
+                        maxLength={128}
+                        autoComplete="new-password"
+                        className="w-full h-10 px-3 pr-10 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShow(!show)}
+                        className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      >
+                        {show ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                      Confirm Password <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <input
+                        name="confirm_password"
+                        type={showConfirm ? "text" : "password"}
+                        placeholder="Re-enter identical password"
+                        required
+                        minLength={8}
+                        maxLength={128}
+                        autoComplete="new-password"
+                        className="w-full h-10 px-3 pr-10 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirm(!showConfirm)}
+                        className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      >
+                        {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* IF TEAM: 2 MEMBERS SIDE-BY-SIDE */
+                <div className="space-y-6">
+                  {/* Team Name & University Top Row */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-4 rounded-lg bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/70 dark:border-blue-900/40">
+                    <div>
+                      <label className="block text-xs font-bold text-blue-900 dark:text-blue-200 uppercase tracking-wider mb-1.5">
+                        Team Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        name="team_name"
+                        placeholder="e.g. CodeWarriors, ByteCrafters"
+                        required
+                        maxLength={100}
+                        className="w-full h-10 px-3 text-xs rounded-md border border-blue-200 dark:border-blue-900/60 bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 font-semibold focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-blue-900 dark:text-blue-200 uppercase tracking-wider mb-1.5">
+                        University Name <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        name="university_name"
+                        placeholder="e.g. COMSATS University Islamabad, Vehari Campus"
+                        required
+                        maxLength={150}
+                        className="w-full h-10 px-3 text-xs rounded-md border border-blue-200 dark:border-blue-900/60 bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 2 Member Columns */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                    {/* MEMBER 1: TEAM LEADER */}
+                    <div className="p-5 rounded-lg border-2 border-blue-500/30 bg-blue-50/20 dark:bg-[#0c1629] space-y-3.5">
+                      <div className="flex items-center justify-between pb-2 border-b border-blue-200/50 dark:border-blue-900/40">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
+                            1
+                          </span>
+                          <div>
+                            <strong className="text-xs font-bold text-blue-950 dark:text-blue-100">
+                              Member 1 (Team Leader)
+                            </strong>
+                            <span className="block text-[10px] text-blue-600 dark:text-blue-400">
+                              Submits project source code & GitHub repo
+                            </span>
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300">
+                          Submitter
+                        </span>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                          Full Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          name="full_name"
+                          placeholder="Leader's full name"
+                          required
+                          maxLength={100}
+                          className="w-full h-9 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                          Email Address <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          name="email"
+                          placeholder="leader@university.edu"
+                          required
+                          type="email"
+                          maxLength={254}
+                          className="w-full h-9 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                          Phone Number <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          name="phone_no"
+                          placeholder="03001234567 or +92 300 1234567"
+                          type="tel"
+                          required
+                          pattern="[0-9+\s]{8,20}"
+                          className="w-full h-9 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                            Department
+                          </label>
+                          <select
+                            name="department"
+                            defaultValue="Computer Science"
+                            className="w-full h-9 px-2 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                          >
+                            {DEPARTMENTS.map((d) => (
+                              <option key={d} value={d}>{d}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                            Semester
+                          </label>
+                          <select
+                            name="semester"
+                            defaultValue="6th Semester"
+                            className="w-full h-9 px-2 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                          >
+                            {SEMESTERS.map((s) => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* MEMBER 2: TEAMMATE */}
+                    <div className="p-5 rounded-lg border-2 border-purple-500/30 bg-purple-50/20 dark:bg-[#150d24] space-y-3.5">
+                      <div className="flex items-center justify-between pb-2 border-b border-purple-200/50 dark:border-purple-900/40">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-xs">
+                            2
+                          </span>
+                          <div>
+                            <strong className="text-xs font-bold text-purple-950 dark:text-purple-100">
+                              Member 2 (Teammate)
+                            </strong>
+                            <span className="block text-[10px] text-purple-600 dark:text-purple-400">
+                              Can log in to view live workspace, timer & scores
+                            </span>
+                          </div>
+                        </div>
+                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300">
+                          Teammate
+                        </span>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                          Full Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          name="teammate_name"
+                          placeholder="Teammate's full name"
+                          required
+                          maxLength={100}
+                          className="w-full h-9 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                          Email Address <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          name="teammate_email"
+                          placeholder="teammate@university.edu"
+                          required
+                          type="email"
+                          maxLength={254}
+                          className="w-full h-9 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                          Phone Number <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          name="teammate_phone"
+                          placeholder="03001234567 or +92 300 1234567"
+                          type="tel"
+                          required
+                          pattern="[0-9+\s]{8,20}"
+                          className="w-full h-9 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                            Department
+                          </label>
+                          <select
+                            name="teammate_department"
+                            defaultValue="Computer Science"
+                            className="w-full h-9 px-2 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                          >
+                            {DEPARTMENTS.map((d) => (
+                              <option key={d} value={d}>{d}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
+                            Semester
+                          </label>
+                          <select
+                            name="teammate_semester"
+                            defaultValue="6th Semester"
+                            className="w-full h-9 px-2 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                          >
+                            {SEMESTERS.map((s) => (
+                              <option key={s} value={s}>{s}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Team Password Row */}
+                  <div className="p-4 rounded-lg bg-slate-50 dark:bg-[#0d1527] border border-slate-200 dark:border-[#1e293b] space-y-3">
+                    <div className="text-xs text-slate-600 dark:text-slate-400">
+                      <strong className="text-slate-900 dark:text-slate-100">Team Login Credentials:</strong> Both Member 1 and Member 2 will be able to log in using their own respective email addresses and the shared password below.
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                          Team Password <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            name="password"
+                            type={show ? "text" : "password"}
+                            placeholder="At least 8 characters"
+                            required
+                            minLength={8}
+                            maxLength={128}
+                            className="w-full h-10 px-3 pr-10 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShow(!show)}
+                            className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          >
+                            {show ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                          Confirm Team Password <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            name="confirm_password"
+                            type={showConfirm ? "text" : "password"}
+                            placeholder="Re-enter identical password"
+                            required
+                            minLength={8}
+                            maxLength={128}
+                            className="w-full h-10 px-3 pr-10 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirm(!showConfirm)}
+                            className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                          >
+                            {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* PAYMENT ACCOUNT & DEPOSIT SLIP (Shared across both modes) */}
+              <div className="p-4 rounded-lg bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CreditCard size={16} className="text-emerald-600 dark:text-emerald-400" />
+                    <strong className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                      Payment Account Details ({feeAmount} per {participationType === "team" ? "team" : "participant"})
+                    </strong>
+                  </div>
+                  <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200">
+                    {bankName}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-3 p-2.5 rounded bg-white dark:bg-[#0d1527] border border-emerald-200/60 dark:border-emerald-900/40 text-xs">
+                  <div>
+                    <div className="text-[10px] text-slate-500">Account Title: <strong className="text-slate-800 dark:text-slate-200">{accountTitle}</strong></div>
+                    <div className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100 mt-0.5">{accountNumber}</div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => copyToClipboard(accountNumber)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-300 hover:bg-blue-100 transition-colors border border-blue-200 dark:border-blue-800 cursor-pointer"
+                  >
+                    {copiedAccount ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                    {copiedAccount ? "Copied!" : "Copy Account"}
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    Deposit Receipt / Screenshot <span className="text-slate-400 lowercase font-normal">(PNG, JPG, or PDF · max 3 MB)</span>
+                  </label>
+                  <div className="file-drop receipt-drop">
+                    <Upload size={20} />
+                    <strong>{receipt || "Click to attach your deposit slip"}</strong>
+                    <span>PNG, JPG, or PDF · Up to 3 MB</span>
+                    <input
+                      type="file"
+                      name="receipt"
+                      accept="image/png,image/jpeg,application/pdf"
+                      aria-label="Payment deposit receipt"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f && f.size > 3 * 1024 * 1024) {
+                          e.target.value = "";
+                          setReceipt("");
+                          setError("Receipt must be smaller than 3 MB.");
+                        } else {
+                          setReceipt(f?.name || "");
+                          setError("");
+                        }
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {error && (
+                <div className="p-3 rounded-md bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs font-medium" role="alert">
+                  {error}
+                </div>
+              )}
+
+              <Button size="lg" disabled={busy || registrationPending || (!demo && !ready)} type="submit" className="w-full h-11 text-sm font-bold">
+                {busy ? (
+                  <>
+                    <span className="spinner mr-2" /> Creating Account…
+                  </>
+                ) : (
+                  <>
+                    {participationType === "team" ? "Register Team (2 Members)" : "Create Account & Register"}
+                    <ArrowUpRight size={17} className="ml-1" />
+                  </>
+                )}
+              </Button>
+
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-xs text-slate-500 border-t border-slate-100 dark:border-slate-800">
+                <span className="flex items-center gap-1.5">
+                  <ShieldCheck size={14} className="text-emerald-600" />
+                  Registrations verified by faculty administration.
+                </span>
+                <span>
+                  Already have an account?{" "}
+                  <Link href="/login" className="text-blue-600 font-bold hover:underline">
+                    Log in here &rarr;
+                  </Link>
+                </span>
+              </div>
+            </form>
+          </section>
+
+          {/* GUIDELINES & REQUIREMENTS CARDS (NOW MOVED BELOW THE FORM) */}
+          <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
+            <div className="mb-6">
+              <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block">
+                Official Information & Guidelines
+              </span>
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight mt-1">
+                Competition Rules, Permitted Tech Stack & Evaluation Rubric
+              </h2>
+              <p className="text-xs text-slate-500 mt-1">
+                Carefully review the official challenge regulations, rubric scoring breakdown, and submission freeze policies.
+              </p>
+            </div>
+
+            {renderGuidelinesCards()}
+          </div>
+        </div>
+      </PublicShell>
+    );
+  }
+
+  // 2. LOGIN PAGE VIEW: CLASSIC SPLIT STORY + LOGIN PANEL
   return (
     <PublicShell>
-      <div className={`auth-layout container ${register ? "auth-layout-register" : ""}`}>
-        {/* Left Side Story / Guidelines */}
+      <div className="auth-layout container">
+        {/* Left Side Story */}
         <aside className="auth-story">
           <div className="eyebrow">
             <Sparkles size={15} /> YOUR NEXT CHAPTER
           </div>
           <h2>
-            {register ? (
-              <>
-                Big ideas start
-                <br />
-                with a <span>little spark.</span>
-              </>
-            ) : (
-              <>
-                Welcome back,
-                <br />
-                <span>builder.</span>
-              </>
-            )}
+            Welcome back,
+            <br />
+            <span>builder.</span>
           </h2>
 
           <p>
-            {register
-              ? "Join the official VSpark 2026 Web Challenge. Read the guidelines below and create your team profile."
-              : "Your ideas are waiting. Pick up where you left off and keep building something that matters."}
+            Your ideas are waiting. Pick up where you left off and keep building something that matters.
           </p>
 
-          {/* DYNAMIC 3 CARDS ON REGISTER PAGE */}
-          {register && (
-            <div className="space-y-4 my-6">
-              {/* CARD 1: PERMITTED TECHNOLOGIES */}
-              <div className="p-4 rounded-[2px] bg-white dark:bg-[#101a2b] border border-slate-200/90 dark:border-[#1e293b] shadow-xs">
-                <div className="flex items-center justify-between mb-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-[2px] bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 flex items-center justify-center font-bold text-xs">
-                      <Layers className="w-3.5 h-3.5" />
-                    </span>
-                    <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 tracking-tight">Permitted Technologies</h3>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-semibold">
-                    Approved Stack
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-1.5 mb-2.5">
-                  {techPills.map((pill, i) => (
-                    <span
-                      key={i}
-                      className="px-2.5 py-1 rounded-[2px] bg-blue-50 dark:bg-blue-950/50 text-blue-800 dark:text-blue-300 text-[11px] font-semibold border border-blue-100/80 dark:border-blue-900/60"
-                    >
-                      {pill}
-                    </span>
-                  ))}
-                </div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-snug">
-                  <strong className="text-slate-800 dark:text-slate-200">AI Assistance Allowed:</strong> ChatGPT and Claude are permitted for debugging and brainstorming. Full code defense required during evaluation.
-                </p>
-              </div>
-
-              {/* CARD 2: 100-POINT EVALUATION RUBRIC */}
-              <div className="p-4 rounded-[2px] bg-white dark:bg-[#101a2b] border border-slate-200/90 dark:border-[#1e293b] shadow-xs">
-                <div className="flex items-center justify-between mb-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-[2px] bg-blue-600 text-white flex items-center justify-center font-bold text-xs">
-                      <Award className="w-3.5 h-3.5" />
-                    </span>
-                    <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 tracking-tight">Evaluation & Grading Rubric</h3>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 text-[10px] font-bold">
-                    100 Pts Total
-                  </span>
-                </div>
-                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
-                  {OFFICIAL_RUBRIC.map((item, idx) => (
-                    <div
-                      key={item.id}
-                      className="flex items-center justify-between gap-2 p-1.5 rounded-[2px] bg-slate-50/70 dark:bg-[#0d1527] border border-slate-100 dark:border-[#1e293b] text-[11px]"
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        <span className="w-4 h-4 rounded-full bg-blue-600 text-white text-[9px] font-bold flex items-center justify-center shrink-0">
-                          {idx + 1}
-                        </span>
-                        <span className="text-slate-800 dark:text-slate-200 font-medium truncate">{item.label}</span>
-                      </div>
-                      <span className="font-bold text-blue-700 dark:text-blue-400 shrink-0">{item.max}m</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* CARD 3: RULES & SUBMISSION FREEZE */}
-              <div className="p-4 rounded-[2px] bg-white dark:bg-[#101a2b] border border-slate-200/90 dark:border-[#1e293b] shadow-xs">
-                <div className="flex items-center justify-between mb-2.5">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-[2px] bg-purple-600 text-white flex items-center justify-center font-bold text-xs">
-                      <Clock3 className="w-3.5 h-3.5" />
-                    </span>
-                    <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 tracking-tight">Rules & Submission Freeze</h3>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 text-[10px] font-bold">
-                    120 Mins Clock
-                  </span>
-                </div>
-                <div className="space-y-1.5 max-h-44 overflow-y-auto pr-1">
-                  {defaultRulesList.map((rule, idx) => (
-                    <div key={idx} className="flex items-start gap-2 text-[11.5px] leading-snug">
-                      <span className="w-4 h-4 rounded-full bg-purple-600 text-white text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">
-                        {idx + 1}
-                      </span>
-                      <div className="text-slate-700 dark:text-slate-300">
-                        <strong className="text-slate-900 dark:text-slate-100 font-bold">{rule.title}:</strong> {rule.desc}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* CARD 4: REGISTRATION FEE & BANK ACCOUNT DETAILS */}
-              <div className="p-4 rounded-[2px] bg-gradient-to-br from-emerald-50/70 to-blue-50/70 dark:from-[#0d1e1c] dark:to-[#0d172a] border border-emerald-200/90 dark:border-emerald-800/60 shadow-xs">
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 rounded-[2px] bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
-                      <CreditCard className="w-3.5 h-3.5" />
-                    </span>
-                    <h3 className="text-xs font-bold text-slate-900 dark:text-slate-100 tracking-tight">Payment Account Details</h3>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 text-[10px] font-bold border border-emerald-200 dark:border-emerald-800">
-                    {feeAmount} Entry Fee
-                  </span>
-                </div>
-
-                <div className="space-y-2 text-xs">
-                  <div className="flex items-center justify-between p-2 rounded-[2px] bg-white/90 dark:bg-[#101a2b] border border-slate-200/70 dark:border-[#1e293b]">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Bank / Wallet:</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">{bankName}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded-[2px] bg-white/90 dark:bg-[#101a2b] border border-slate-200/70 dark:border-[#1e293b]">
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Account Title:</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">{accountTitle}</span>
-                  </div>
-                  <div className="flex items-center justify-between p-2 rounded-[2px] bg-white/90 dark:bg-[#101a2b] border border-slate-200/70 dark:border-[#1e293b]">
-                    <div className="flex flex-col">
-                      <span className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">Account Number:</span>
-                      <span className="font-mono font-bold text-xs text-blue-700 dark:text-blue-400 tracking-wide">{accountNumber}</span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => copyToClipboard(accountNumber)}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-[2px] text-[11px] font-semibold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors cursor-pointer"
-                      title="Copy account number"
-                    >
-                      {copiedAccount ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
-                      {copiedAccount ? "Copied!" : "Copy"}
-                    </button>
-                  </div>
-                  {bankIban && (
-                    <div className="flex items-center justify-between p-2 rounded-[2px] bg-white/90 dark:bg-[#101a2b] border border-slate-200/70 dark:border-[#1e293b]">
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">IBAN:</span>
-                      <span className="font-mono text-[11px] font-semibold text-slate-800 dark:text-slate-200">{bankIban}</span>
-                    </div>
-                  )}
-                </div>
-
-                <p className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-2.5 leading-snug">
-                  Transfer the registration fee to the official account above and attach your payment receipt on the right to complete registration.
-                </p>
-              </div>
+          <div className="auth-visual">
+            <div className="auth-code-symbol">
+              &lt;<span>/</span>&gt;
             </div>
-          )}
-
-          {!register && (
-            <>
-              <div className="auth-visual">
-                <div className="auth-code-symbol">
-                  &lt;<span>/</span>&gt;
-                </div>
-                <span className="auth-visual-label">
-                  <span className="online-dot" /> THE NEXT GREAT IDEA COULD BE YOURS.
-                </span>
-              </div>
-              <div className="auth-benefits">
-                <span>
-                  <Check size={16} /> Open to all university students
-                </span>
-                <span>
-                  <Check size={16} /> Official Entry Fee: Rs. 500
-                </span>
-                <span>
-                  <Check size={16} /> Your skills. Your opportunity.
-                </span>
-              </div>
-            </>
-          )}
+            <span className="auth-visual-label">
+              <span className="online-dot" /> THE NEXT GREAT IDEA COULD BE YOURS.
+            </span>
+          </div>
+          <div className="auth-benefits">
+            <span>
+              <Check size={16} /> Open to all university students
+            </span>
+            <span>
+              <Check size={16} /> Official Entry Fee: Rs. 500
+            </span>
+            <span>
+              <Check size={16} /> Your skills. Your opportunity.
+            </span>
+          </div>
         </aside>
 
-        {/* Right Side Form */}
+        {/* Right Side Login Panel */}
         <section className="auth-panel">
           <Link href="/" className="back-link">
             <ArrowLeft size={14} /> Back to home
           </Link>
-          <div className="eyebrow">{register ? "LET’S MAKE IT OFFICIAL" : "GOOD TO SEE YOU AGAIN"}</div>
-          <h1>{register ? "Create your account" : "Log in to VSpark"}</h1>
-          <p>
-            {register ? "Your first step toward something great." : "Enter your details to access your workspace."}
-          </p>
-          {registrationPending && (
-            <p className="info-note" role="status">
-              Registration is opening soon. Please check back after the organizer’s announcement.
-            </p>
-          )}
+          <div className="eyebrow">GOOD TO SEE YOU AGAIN</div>
+          <h1>Log in to VSpark</h1>
+          <p>Enter your credentials to access your competition workspace.</p>
+
           <form onSubmit={submit} className="form-stack">
-            {register && (
-              <label>
-                Full name
-                <input
-                  name="full_name"
-                  placeholder="Your full name"
-                  required
-                  maxLength={100}
-                  autoComplete="name"
-                />
-              </label>
-            )}
             <label>
               Email address
               <input
@@ -400,42 +1030,18 @@ export function AuthPage({ register = false }: { register?: boolean }) {
                 maxLength={254}
               />
             </label>
-            {register && (
-              <>
-                <label>
-                  Phone number <span className="label-hint">Include country code</span>
-                  <input
-                    name="phone_no"
-                    placeholder="+92 300 1234567"
-                    type="tel"
-                    required
-                    pattern="[0-9+\s]{8,20}"
-                    autoComplete="tel"
-                  />
-                </label>
-                <label>
-                  University
-                  <input
-                    name="university_name"
-                    placeholder="Your university name"
-                    required
-                    maxLength={150}
-                    autoComplete="organization"
-                  />
-                </label>
-              </>
-            )}
+
             <label>
               Password
               <div className="password-input">
                 <input
                   name="password"
-                  placeholder={register ? "At least 8 characters" : "Your password"}
+                  placeholder="Your password"
                   required
                   type={show ? "text" : "password"}
                   minLength={8}
                   maxLength={128}
-                  autoComplete={register ? "new-password" : "current-password"}
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -447,115 +1053,56 @@ export function AuthPage({ register = false }: { register?: boolean }) {
                 </button>
               </div>
             </label>
-            {!register && (
-              <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "-6px", marginBottom: "8px" }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setForgotOpen(true);
-                    setForgotError("");
-                    setForgotSuccess("");
-                  }}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#2563eb",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    textDecoration: "underline",
-                    padding: 0,
-                  }}
-                >
-                  Forgot Password?
-                </button>
-              </div>
-            )}
-            {register && (
-              <div className="p-3 mb-1.5 rounded-[4px] bg-slate-50 dark:bg-[#0d1527] border border-slate-200 dark:border-[#1e293b] space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5">
-                    <CreditCard size={14} className="text-emerald-600 dark:text-emerald-400" />
-                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                      Payment Account (<span className="text-emerald-600 dark:text-emerald-400">{feeAmount}</span>)
-                    </span>
-                  </div>
-                  <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
-                    {bankName}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between bg-white dark:bg-[#101a2b] p-2 rounded border border-slate-200/80 dark:border-slate-800 text-xs">
-                  <div>
-                    <div className="text-[10px] text-slate-400 font-medium">Title: <span className="font-semibold text-slate-700 dark:text-slate-200">{accountTitle}</span></div>
-                    <div className="font-mono font-bold text-slate-900 dark:text-slate-100 text-xs tracking-wide">{accountNumber}</div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => copyToClipboard(accountNumber)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900 transition-colors border border-blue-200 dark:border-blue-800 cursor-pointer"
-                  >
-                    {copiedAccount ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
-                    {copiedAccount ? "Copied" : "Copy Account"}
-                  </button>
-                </div>
-              </div>
-            )}
-            {register && (
-              <label>
-                Payment deposit receipt <span className="label-hint">Rs. 500 · Slip / Screenshot</span>
-                <span className="file-drop receipt-drop">
-                  <Upload size={20} />
-                  <strong>{receipt || "Click to attach your deposit slip"}</strong>
-                  <span>PNG, JPG, or PDF · Up to 3 MB</span>
-                  <input
-                    type="file"
-                    name="receipt"
-                    accept="image/png,image/jpeg,application/pdf"
-                    aria-label="Payment deposit receipt"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f && f.size > 3 * 1024 * 1024) {
-                        e.target.value = "";
-                        setReceipt("");
-                        setError("Receipt must be smaller than 3 MB.");
-                      } else {
-                        setReceipt(f?.name || "");
-                        setError("");
-                      }
-                    }}
-                  />
-                </span>
-              </label>
-            )}
+
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "-6px", marginBottom: "8px" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setForgotOpen(true);
+                  setForgotError("");
+                  setForgotSuccess("");
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#2563eb",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                  padding: 0,
+                }}
+              >
+                Forgot Password?
+              </button>
+            </div>
+
             {error && (
               <p className="error-message" role="alert">
                 {error}
               </p>
             )}
-            <Button size="lg" disabled={busy || registrationPending || (!demo && !ready)} type="submit">
+
+            <Button size="lg" disabled={busy || (!demo && !ready)} type="submit">
               {busy ? (
                 <>
                   <span className="spinner" /> Please wait…
                 </>
               ) : (
                 <>
-                  {register ? "Create account" : "Log in"}
-                  <ArrowUpRight size={17} />
+                  Log in <ArrowUpRight size={17} />
                 </>
               )}
             </Button>
-            {register && (
-              <p className="form-footnote">
-                <ShieldCheck size={13} /> Your registration will be reviewed by an organizer.
-              </p>
-            )}
           </form>
+
           <p className="auth-switch">
-            {register ? "Already part of the community?" : "New here?"}{" "}
-            <Link href={register ? "/login" : "/register"}>
-              {register ? "Log in" : "Create an account"} <ArrowUpRight size={12} />
+            New here?{" "}
+            <Link href="/register">
+              Create an account <ArrowUpRight size={12} />
             </Link>
           </p>
+
           {demo && (
             <div className="demo-options">
               <div>

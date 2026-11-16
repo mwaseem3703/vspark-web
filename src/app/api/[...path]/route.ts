@@ -16,6 +16,8 @@ import {
 } from "@/lib/supabase/server";
 import {
   sendEmail,
+  sendTeamRegistrationEmails,
+  sendTeamApprovalEmail,
   sendTaskAnnouncementEmail,
   sendBroadcastNoticeEmail,
   sendDirectStudentEmail,
@@ -400,13 +402,28 @@ async function get(req: NextRequest, path: string) {
         };
       });
     else if (p?.status === "approved") {
+      let teamMemberIds = [p.id];
+      if (p.team_id) {
+        try {
+          const { data: members } = await db
+            .from("profiles")
+            .select("id")
+            .eq("team_id", p.team_id);
+          if (members && members.length > 0) {
+            teamMemberIds = members.map((m: { id: string }) => m.id);
+          }
+        } catch {
+          /* Fallback to solo ID */
+        }
+      }
+
       let studentEval: Record<string, unknown> | null = null;
       if (s.results_published) {
         try {
           const evRes = await db
             .from("evaluations")
             .select("*")
-            .eq("student_id", p.id)
+            .in("student_id", teamMemberIds)
             .maybeSingle();
           studentEval = evRes.data || null;
         } catch {
@@ -414,7 +431,7 @@ async function get(req: NextRequest, path: string) {
         }
       }
       submissions = check(
-        await db.from("submissions").select("*").eq("profile_id", p.id),
+        await db.from("submissions").select("*").in("profile_id", teamMemberIds),
       ).map((row) => ({
         ...row,
         drive_folder_url: row.drive_folder_url || "",
@@ -523,14 +540,29 @@ async function get(req: NextRequest, path: string) {
   throw new ApiError("Route not found.", 404);
 }
 const registration = z.object({
+  participation_type: z.enum(["individual", "team"]).default("individual"),
   full_name: z.string().trim().min(1).max(100),
-  email: z.email().max(254),
+  email: z.string().email().max(254),
   phone_no: z
     .string()
     .trim()
-    .regex(/^\+?[0-9\s()\-]{8,20}$/),
+    .regex(/^[0-9+\s()\-]{8,20}$/),
   university_name: z.string().trim().min(1).max(150),
+  department: z.string().trim().max(100).optional().nullable(),
+  semester: z.string().trim().max(50).optional().nullable(),
   password: z.string().min(8).max(128),
+  team_name: z.string().trim().max(100).optional().nullable(),
+  teammate_name: z.string().trim().max(100).optional().nullable(),
+  teammate_email: z.string().email().max(254).optional().nullable().or(z.literal("")),
+  teammate_phone: z
+    .string()
+    .trim()
+    .regex(/^[0-9+\s()\-]{8,20}$/)
+    .optional()
+    .nullable()
+    .or(z.literal("")),
+  teammate_department: z.string().trim().max(100).optional().nullable(),
+  teammate_semester: z.string().trim().max(50).optional().nullable(),
 });
 const settingsSchema = z
   .object({
@@ -587,20 +619,58 @@ async function post(req: NextRequest, path: string) {
       ]);
       await verifyMagic(receipt);
     }
-    const existing = await db
-      .from("profiles")
-      .select("id")
-      .eq("email", input.email)
-      .maybeSingle();
-    if (existing.data)
-      throw new ApiError(
-        "This email address is already registered. Please sign in or reset your password.",
-        409,
-      );
+
+    const isTeam = input.participation_type === "team";
+
+    if (isTeam) {
+      if (!input.team_name?.trim())
+        throw new ApiError("Team name is required for team registration.", 400);
+      if (!input.teammate_name?.trim())
+        throw new ApiError("Member 2 (Teammate) full name is required.", 400);
+      if (!input.teammate_email?.trim() || !input.teammate_email.includes("@"))
+        throw new ApiError("Member 2 (Teammate) valid email address is required.", 400);
+      if (!input.teammate_phone?.trim())
+        throw new ApiError("Member 2 (Teammate) phone number is required.", 400);
+      if (input.email.trim().toLowerCase() === input.teammate_email.trim().toLowerCase())
+        throw new ApiError("Team Leader and Teammate cannot have the same email address.", 400);
+
+      const exLeader = await db
+        .from("profiles")
+        .select("id")
+        .eq("email", input.email.trim().toLowerCase())
+        .maybeSingle();
+      if (exLeader.data)
+        throw new ApiError(
+          "The Team Leader email address is already registered. Please sign in instead.",
+          409,
+        );
+
+      const exTeammate = await db
+        .from("profiles")
+        .select("id")
+        .eq("email", input.teammate_email.trim().toLowerCase())
+        .maybeSingle();
+      if (exTeammate.data)
+        throw new ApiError(
+          "The Teammate email address is already registered with another account.",
+          409,
+        );
+    } else {
+      const existing = await db
+        .from("profiles")
+        .select("id")
+        .eq("email", input.email.trim().toLowerCase())
+        .maybeSingle();
+      if (existing.data)
+        throw new ApiError(
+          "This email address is already registered. Please sign in or reset your password.",
+          409,
+        );
+    }
 
     const client = await serverClient();
     const { data, error } = await client.auth.signUp({
-      email: input.email,
+      email: input.email.trim().toLowerCase(),
       password: input.password,
       options: {
         data: {
@@ -621,6 +691,7 @@ async function post(req: NextRequest, path: string) {
         notice:
           "Check your inbox. If you already have an account, log in instead.",
       });
+
     let notice =
       "Registration received. Check your inbox to confirm your email, if requested.";
     let receiptPath: string | null = null;
@@ -642,6 +713,8 @@ async function post(req: NextRequest, path: string) {
       }
     }
 
+    const teamId = isTeam ? crypto.randomUUID() : null;
+
     if (data.user) {
       // Guarantee student profile row is created in public.profiles table
       await db.from("profiles").upsert(
@@ -654,14 +727,86 @@ async function post(req: NextRequest, path: string) {
           role: "student",
           status: "pending",
           payment_receipt_url: receiptPath,
+          participation_type: input.participation_type || "individual",
+          team_name: isTeam ? input.team_name?.trim() : null,
+          team_role: isTeam ? "leader" : "individual",
+          team_id: teamId,
+          department: input.department || null,
+          semester: input.semester || null,
+          teammate_name: isTeam ? input.teammate_name?.trim() : null,
+          teammate_email: isTeam ? input.teammate_email?.trim().toLowerCase() : null,
+          teammate_phone: isTeam ? input.teammate_phone?.trim() : null,
+          teammate_department: isTeam ? input.teammate_department || null : null,
+          teammate_semester: isTeam ? input.teammate_semester || null : null,
         },
         { onConflict: "id" },
       );
     }
+
+    if (isTeam && input.teammate_email) {
+      // Create Member 2 auth user with the same shared team password
+      const { data: m2Auth, error: m2Err } = await db.auth.admin.createUser({
+        email: input.teammate_email.trim().toLowerCase(),
+        password: input.password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: input.teammate_name?.trim(),
+          phone_no: input.teammate_phone?.trim(),
+          university_name: input.university_name,
+        },
+      });
+
+      if (m2Err) {
+        console.error("Member 2 auth creation error:", m2Err);
+        throw new ApiError(`Teammate account creation failed: ${m2Err.message}`, 400);
+      }
+
+      if (m2Auth.user) {
+        await db.from("profiles").upsert(
+          {
+            id: m2Auth.user.id,
+            full_name: input.teammate_name!.trim(),
+            email: input.teammate_email.trim().toLowerCase(),
+            phone_no: input.teammate_phone?.trim() || input.phone_no,
+            university_name: input.university_name,
+            role: "student",
+            status: "pending",
+            payment_receipt_url: receiptPath,
+            participation_type: "team",
+            team_name: input.team_name?.trim(),
+            team_role: "member",
+            team_id: teamId,
+            department: input.teammate_department || null,
+            semester: input.teammate_semester || null,
+            teammate_name: input.full_name,
+            teammate_email: input.email.trim().toLowerCase(),
+            teammate_phone: input.phone_no,
+            teammate_department: input.department || null,
+            teammate_semester: input.semester || null,
+          },
+          { onConflict: "id" },
+        );
+      }
+
+      // Send registration emails to both Leader and Teammate
+      await sendTeamRegistrationEmails({
+        leaderEmail: input.email.trim().toLowerCase(),
+        leaderName: input.full_name,
+        teammateEmail: input.teammate_email.trim().toLowerCase(),
+        teammateName: input.teammate_name!.trim(),
+        teamName: input.team_name!.trim(),
+      });
+
+      return json({
+        redirect: "/pending",
+        notice: `Team "${input.team_name?.trim()}" registered successfully! Both members can log in using their own emails and the chosen team password once verified.`,
+      });
+    }
+
     const mail = await sendEmail(
       input.email,
       "VSpark — Registration received",
-      `Hi ${input.full_name},\n\nYour registration has been received and is awaiting faculty admin verification. We will verify your deposit receipt and email you once your account is approved.\n\nThe VSpark Team`,
+      `Hi ${input.full_name},\n\nYour individual registration has been received and is awaiting faculty admin verification. We will verify your deposit receipt and email you once your account is approved.\n\nThe VSpark Team`,
       {
         heading: "Your next chapter starts here.",
         preheader:
@@ -899,27 +1044,63 @@ async function post(req: NextRequest, path: string) {
         .single(),
     ) as Profile;
 
-    check(
-      await db
-        .from("profiles")
-        .update({ status: targetStatus })
-        .eq("id", studentId)
-        .eq("role", "student"),
-    );
-
     let sent = true;
-    if (targetStatus === "approved" && previous.status !== "approved") {
-      sent = await sendEmail(
-        previous.email,
-        "VSpark — You’re approved!",
-        `Hi ${previous.full_name},\n\nYour VSpark registration is approved. Log in to view your dashboard and competition schedule.\n\n${process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin}/login\n\nSee you at the challenge!\nThe VSpark team`,
-        {
-          heading: "You’re in. Let’s build.",
-          preheader: "Your registration is approved. Your student dashboard is ready.",
-          actionLabel: "Open your dashboard",
-          actionUrl: `${process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin}/dashboard`,
-        },
+
+    if (previous.team_id) {
+      // Find all team members
+      const { data: teamMembers } = await db
+        .from("profiles")
+        .select("*")
+        .eq("team_id", previous.team_id)
+        .eq("role", "student");
+
+      // Approve/reject the entire team simultaneously
+      check(
+        await db
+          .from("profiles")
+          .update({ status: targetStatus })
+          .eq("team_id", previous.team_id)
+          .eq("role", "student"),
       );
+
+      if (targetStatus === "approved" && teamMembers && teamMembers.length > 0) {
+        for (const m of teamMembers) {
+          if (m.status !== "approved") {
+            const isLeader = m.team_role === "leader";
+            const partner = teamMembers.find((p: Profile) => p.id !== m.id);
+            const ok = await sendTeamApprovalEmail({
+              to: m.email,
+              studentName: m.full_name,
+              teamName: m.team_name || previous.team_name || "VSpark Team",
+              isLeader,
+              partnerName: partner?.full_name || m.teammate_name || "Teammate",
+            });
+            if (!ok) sent = false;
+          }
+        }
+      }
+    } else {
+      check(
+        await db
+          .from("profiles")
+          .update({ status: targetStatus })
+          .eq("id", studentId)
+          .eq("role", "student"),
+      );
+
+      if (targetStatus === "approved" && previous.status !== "approved") {
+        sent = await sendEmail(
+          previous.email,
+          "VSpark — You’re approved!",
+          `Hi ${previous.full_name},\n\nYour VSpark registration is approved. Log in to view your dashboard and competition schedule.\n\n${process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin}/login\n\nSee you at the challenge!\nThe VSpark team`,
+          {
+            heading: "You’re in. Let’s build.",
+            preheader: "Your registration is approved. Your student dashboard is ready.",
+            actionLabel: "Open your dashboard",
+            actionUrl: `${process.env.NEXT_PUBLIC_SITE_URL || req.nextUrl.origin}/dashboard`,
+          },
+        );
+      }
     }
 
     return json({
@@ -1329,6 +1510,12 @@ async function post(req: NextRequest, path: string) {
   }
   if (path === "upload/start") {
     const p = await participant();
+    if (p.participation_type === "team" && p.team_role === "member") {
+      throw new ApiError(
+        "Only the Team Leader has permission to submit project files and repository links.",
+        403,
+      );
+    }
     const uploadSettings = await settings();
     if (
       !serviceReadiness(
@@ -1367,16 +1554,32 @@ async function post(req: NextRequest, path: string) {
       throw new ApiError(
         "Invalid file selection or folder larger than 100 MB.",
       );
+
+    let checkProfileIds = [p.id];
+    if (p.team_id) {
+      try {
+        const { data: teamMembers } = await db
+          .from("profiles")
+          .select("id")
+          .eq("team_id", p.team_id);
+        if (teamMembers && teamMembers.length > 0) {
+          checkProfileIds = teamMembers.map((m: { id: string }) => m.id);
+        }
+      } catch {
+        /* Fallback */
+      }
+    }
+
     const existingSubmission = check(
       await db
         .from("submissions")
         .select("id, drive_folder_url")
-        .eq("profile_id", p.id)
+        .in("profile_id", checkProfileIds)
         .maybeSingle(),
     );
     if (existingSubmission) {
       throw new ApiError(
-        "You have already submitted your project. Submissions are final and cannot be resubmitted.",
+        "Your project has already been submitted. Submissions are final and cannot be resubmitted.",
         409,
       );
     }
@@ -1449,6 +1652,9 @@ async function post(req: NextRequest, path: string) {
   }
   if (path === "upload/file") {
     const p = await participant();
+    if (p.participation_type === "team" && p.team_role === "member") {
+      throw new ApiError("Only the Team Leader can submit project files.", 403);
+    }
     const form = await req.formData();
     const upload = await session(String(form.get("session_id")), p.id);
     const path = String(form.get("path"));
@@ -1526,6 +1732,9 @@ async function post(req: NextRequest, path: string) {
   }
   if (path === "upload/complete") {
     const p = await participant();
+    if (p.participation_type === "team" && p.team_role === "member") {
+      throw new ApiError("Only the Team Leader can complete the project submission.", 403);
+    }
     const contentType = req.headers.get("content-type") || "";
     let sessionId: string;
     let clientArchiveBuffer: Buffer | null = null;

@@ -85,6 +85,89 @@ export async function sendEmail(
 }
 
 /**
+ * Send Team Registration Confirmation to both Leader and Teammate
+ */
+export async function sendTeamRegistrationEmails({
+  leaderEmail,
+  leaderName,
+  teammateEmail,
+  teammateName,
+  teamName,
+}: {
+  leaderEmail: string;
+  leaderName: string;
+  teammateEmail: string;
+  teammateName: string;
+  teamName: string;
+}) {
+  const siteUrl = getSiteUrl();
+
+  // 1. Send to Team Leader
+  const leaderText = `Hi ${leaderName},\n\nYour team "${teamName}" has been registered for the VSpark 2026 Web Competition and is awaiting faculty admin verification.\n\nTeam Details:\n• Team Name: ${teamName}\n• Role: Team Leader & Submitter (Only you can submit project code & repository)\n• Teammate: ${teammateName} (${teammateEmail})\n\nWe will verify your deposit receipt and email you once your team is approved.\n\nThe VSpark Team`;
+  await sendEmail(
+    leaderEmail,
+    `VSpark — Team "${teamName}" Registration Received`,
+    leaderText,
+    {
+      heading: `Team "${teamName}" Registered`,
+      preheader: `Team ${teamName} registration received. Awaiting faculty verification.`,
+      actionLabel: "View Registration Status",
+      actionUrl: `${siteUrl}/pending`,
+    },
+  );
+
+  // 2. Send to Member 2 (Teammate)
+  const memberText = `Hi ${teammateName},\n\nYou have been added as a Team Member to "${teamName}" by your team leader, ${leaderName}, for the VSpark 2026 Web Competition!\n\nTeam Details:\n• Team Name: ${teamName}\n• Team Leader: ${leaderName} (${leaderEmail})\n• Your Role: Team Member (You can log in to view the live brief, guidelines, and submission results)\n• Sign In: You can log in using this email (${teammateEmail}) and the password chosen during registration.\n\nYour team registration is currently under review by the faculty organizers. You will receive an approval email once verified.\n\nThe VSpark Team`;
+  await sendEmail(
+    teammateEmail,
+    `VSpark — You Were Added to Team "${teamName}"`,
+    memberText,
+    {
+      heading: `Welcome to Team "${teamName}"!`,
+      preheader: `You've been added to team ${teamName} by ${leaderName}.`,
+      actionLabel: "View Registration Status",
+      actionUrl: `${siteUrl}/pending`,
+    },
+  );
+}
+
+/**
+ * Send Team Approval Notification to a Team Member
+ */
+export async function sendTeamApprovalEmail({
+  to,
+  studentName,
+  teamName,
+  isLeader,
+  partnerName,
+}: {
+  to: string;
+  studentName: string;
+  teamName: string;
+  isLeader: boolean;
+  partnerName: string;
+}) {
+  const siteUrl = getSiteUrl();
+  const roleDesc = isLeader
+    ? "As the Team Leader, you will have exclusive access to submit your project files and GitHub repository."
+    : `Your Team Leader (${partnerName}) will submit your project files and GitHub repository on behalf of your team. You can view the live countdown, problem brief, and evaluations from your dashboard.`;
+
+  const text = `Hi ${studentName},\n\nGreat news! Your team "${teamName}" has been approved by the faculty administrators for the VSpark 2026 Web Competition.\n\n${roleDesc}\n\nLog in to your student dashboard to review the schedule, live announcement, and competition brief.\n\nSee you at the challenge!\nThe VSpark Team`;
+
+  return await sendEmail(
+    to,
+    `VSpark — Team "${teamName}" Approved!`,
+    text,
+    {
+      heading: `Team "${teamName}" is Approved!`,
+      preheader: `Your team ${teamName} is approved. Log in to your student dashboard.`,
+      actionLabel: "Open Student Dashboard",
+      actionUrl: `${siteUrl}/dashboard`,
+    },
+  );
+}
+
+/**
  * Send official Task Announcement & Problem Brief Email to a list of students via BCC
  */
 export async function sendTaskAnnouncementEmail({

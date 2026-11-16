@@ -461,13 +461,19 @@ export function StudentsPage() {
     }
   };
 
-  const students = data.students.filter(
-    (s) =>
-      (filter === "all" || s.status === filter) &&
-      `${s.full_name} ${s.email} ${s.university_name}`
-        .toLowerCase()
-        .includes(search.toLowerCase()),
-  );
+  const students = data.students.filter((s) => {
+    let matchFilter = true;
+    if (filter === "all") matchFilter = true;
+    else if (filter === "team") matchFilter = s.participation_type === "team";
+    else if (filter === "individual") matchFilter = s.participation_type !== "team";
+    else matchFilter = s.status === filter;
+
+    const matchSearch = `${s.full_name} ${s.email} ${s.university_name} ${s.team_name || ""} ${s.teammate_name || ""}`
+      .toLowerCase()
+      .includes(search.toLowerCase());
+
+    return matchFilter && matchSearch;
+  });
 
   const totalPages = Math.max(1, Math.ceil(students.length / perPage));
   const paginatedStudents = students.slice((page - 1) * perPage, page * perPage);
@@ -478,10 +484,18 @@ export function StudentsPage() {
     let notice = "";
     try {
       if (demo) {
+        const target = data.students.find((s) => s.id === id);
         update((d) => ({
           ...d,
-          students: d.students.map((s) => (s.id === id ? { ...s, status } : s)),
-          profile: d.profile?.id === id ? { ...d.profile, status } : d.profile,
+          students: d.students.map((s) =>
+            s.id === id || (target?.team_id && s.team_id === target.team_id)
+              ? { ...s, status }
+              : s,
+          ),
+          profile:
+            d.profile?.id === id || (target?.team_id && d.profile?.team_id === target.team_id)
+              ? { ...d.profile, status }
+              : d.profile,
         }));
       } else {
         const result = await request("admin/students", {
@@ -494,15 +508,15 @@ export function StudentsPage() {
       if (status === "approved") {
         setPopupModal({
           isOpen: true,
-          title: "Student Approved Successfully!",
-          message: "The student account has been approved and their competition workspace is unlocked.",
+          title: "Approved Successfully!",
+          message: "The participant/team account has been approved and their competition workspace is unlocked.",
           buttonLabel: "Close",
         });
       } else if (status === "rejected") {
         setPopupModal({
           isOpen: true,
-          title: "Student Rejected",
-          message: "The participant's registration has been rejected.",
+          title: "Registration Rejected",
+          message: "The participant/team registration has been rejected.",
           buttonLabel: "Close",
         });
       }
@@ -653,8 +667,10 @@ export function StudentsPage() {
         >
           {[
             { key: "all", label: "All Students", count: data.students.length },
-            { key: "approved", label: "Active Students", count: data.students.filter((s) => s.status === "approved").length },
+            { key: "team", label: "Teams (👥)", count: data.students.filter((s) => s.participation_type === "team").length },
+            { key: "individual", label: "Individual (👤)", count: data.students.filter((s) => s.participation_type !== "team").length },
             { key: "pending", label: "Pending Verification", count: data.students.filter((s) => s.status === "pending").length },
+            { key: "approved", label: "Active Students", count: data.students.filter((s) => s.status === "approved").length },
             { key: "rejected", label: "Rejected", count: data.students.filter((s) => s.status === "rejected").length },
           ].map((t) => {
             const isActive = filter === t.key;
@@ -825,18 +841,39 @@ export function StudentsPage() {
                           .join("")}
                       </span>
                       <div style={{ minWidth: 0 }}>
-                        <strong style={{ fontSize: "13px", fontWeight: 700, display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {s.full_name}
-                        </strong>
+                        <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                          <strong style={{ fontSize: "13px", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                            {s.full_name}
+                          </strong>
+                          {s.participation_type === "team" ? (
+                            <span style={{ fontSize: "10px", fontWeight: 700, padding: "1px 6px", borderRadius: "4px", backgroundColor: "#dbeafe", color: "#1e40af" }}>
+                              👥 Team: {s.team_name} ({s.team_role === "leader" ? "👑 Leader" : "Member"})
+                            </span>
+                          ) : (
+                            <span style={{ fontSize: "10px", fontWeight: 600, padding: "1px 6px", borderRadius: "4px", backgroundColor: "#f1f5f9", color: "#475569" }}>
+                              👤 Solo
+                            </span>
+                          )}
+                        </div>
                         <small style={{ fontSize: "11px", display: "block", marginTop: "1px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                           {s.email}
                         </small>
+                        {s.participation_type === "team" && s.teammate_name && (
+                          <div style={{ fontSize: "10.5px", color: "#64748b", marginTop: "2px" }}>
+                            Partner: <strong>{s.teammate_name}</strong> ({s.teammate_email})
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
 
                   <div className="students-university-text" style={{ fontSize: "12px", fontWeight: 500 }}>
-                    {s.university_name}
+                    <div>{s.university_name}</div>
+                    {(s.department || s.semester) && (
+                      <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "2px" }}>
+                        {s.department || "CS"}{s.semester ? ` · ${s.semester}` : ""}
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -845,7 +882,10 @@ export function StudentsPage() {
 
                   <div>
                     {(() => {
-                      const sub = data.submissions.find((item) => item.profile_id === s.id);
+                      const sub = data.submissions.find((item) =>
+                        item.profile_id === s.id ||
+                        (s.team_id && data.students.some((other) => other.team_id === s.team_id && other.id === item.profile_id))
+                      );
                       if (!sub) {
                         return <span className="text-xs text-slate-400 italic">Not submitted yet</span>;
                       }
@@ -1032,10 +1072,11 @@ export function StudentsPage() {
                           variant="outline"
                           disabled={busy === s.id}
                           onClick={() => review(s.id, "approved")}
+                          title={s.participation_type === "team" ? "Approve Team (Both Members)" : "Approve Student"}
                           style={{ padding: "4px 8px", fontSize: "11px", height: "28px", borderRadius: "6px" }}
                         >
                           <Check size={13} />
-                          Approve
+                          {s.participation_type === "team" ? "Approve Team" : "Approve"}
                         </Button>
                       )}
                       {s.status !== "rejected" && (
