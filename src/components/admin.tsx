@@ -42,7 +42,7 @@ import { Workspace, PageHeading, StatusBadge, EmptyState } from "./shell";
 import { Button } from "./ui/button";
 import { dateLabel } from "@/lib/utils";
 import { eventState, whatsapp } from "@/lib/competition";
-import { OFFICIAL_RUBRIC, type Settings, type Submission } from "@/lib/types";
+import { OFFICIAL_RUBRIC, type Settings, type Submission, type Profile } from "@/lib/types";
 import { useNow } from "./student";
 import { canonicalDriveFolder, driveFolderId } from "@/lib/drive-folder";
 import { FigmaSuccessModal, ReceiptModal } from "./ScallopedBadge";
@@ -364,6 +364,344 @@ export function AdminOverview() {
 function CodeIcon() {
   return <span className="code-inline">&lt;/&gt;</span>;
 }
+
+function StudentDetailModal({
+  student,
+  submission,
+  onClose,
+  onReview,
+  onResetPassword,
+  onDirectEmail,
+  onOpenReceipt,
+  busy,
+}: {
+  student: Profile | null;
+  submission?: Submission | null;
+  onClose: () => void;
+  onReview: (id: string, status: "approved" | "rejected") => void;
+  onResetPassword: (s: Profile) => void;
+  onDirectEmail: (s: Profile) => void;
+  onOpenReceipt: (name: string, url: string | null) => void;
+  busy: string;
+}) {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    if (student) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [student, onClose]);
+
+  if (!student) return null;
+
+  const isTeam = student.participation_type === "team";
+  const receiptUrl = student.payment_receipt_url
+    ? `/api/admin/receipt?id=${encodeURIComponent(student.id)}`
+    : null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-[#101a2b] border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl p-6 space-y-4"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="flex items-start justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                  isTeam
+                    ? "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                }`}
+              >
+                {isTeam ? "👥 Team Registration" : "👤 Solo Registration"}
+              </span>
+              <StatusBadge status={student.status} />
+            </div>
+            <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
+              {isTeam ? student.team_name : student.full_name}
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              {student.university_name}
+              {student.created_at && (
+                <> · Registered {new Date(student.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</>
+              )}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        {/* Members Cards */}
+        <div className="space-y-3">
+          {/* Member 1 (Leader / Solo) */}
+          <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-[#0c1424] border border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-200/60 dark:border-slate-800 text-xs">
+              <span className="font-bold text-slate-900 dark:text-slate-100">
+                {isTeam ? "Member 1 (Team Leader / Submitter)" : "Participant Details"}
+              </span>
+              {isTeam && (
+                <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-1.5 py-0.5 rounded">
+                  Leader
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+              <div>
+                <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Full Name</span>
+                <strong className="text-slate-900 dark:text-slate-100 text-[12.5px]">{student.full_name}</strong>
+              </div>
+              <div>
+                <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Email Address</span>
+                <a href={`mailto:${student.email}`} className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+                  {student.email}
+                </a>
+              </div>
+              <div>
+                <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Contact Number</span>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="font-mono text-slate-800 dark:text-slate-200">{student.phone_no || "N/A"}</span>
+                  {student.phone_no && (
+                    <a
+                      href={whatsapp(student.phone_no)}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200"
+                    >
+                      <MessageCircle size={10} /> WhatsApp
+                    </a>
+                  )}
+                </div>
+              </div>
+              <div>
+                <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Department & Semester</span>
+                <span className="text-slate-800 dark:text-slate-200 font-medium">
+                  {student.department || "Computer Science"} · {student.semester || "N/A"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Member 2 (If Team) */}
+          {isTeam && student.teammate_name && (
+            <div className="p-3.5 rounded-lg bg-purple-50/40 dark:bg-purple-950/20 border border-purple-200/80 dark:border-purple-900/50">
+              <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-purple-200/60 dark:border-purple-900/40 text-xs">
+                <span className="font-bold text-slate-900 dark:text-slate-100">
+                  Member 2 (Teammate)
+                </span>
+                <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/60 px-1.5 py-0.5 rounded">
+                  View-only Member
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
+                <div>
+                  <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Full Name</span>
+                  <strong className="text-slate-900 dark:text-slate-100 text-[12.5px]">{student.teammate_name}</strong>
+                </div>
+                <div>
+                  <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Email Address</span>
+                  <a href={`mailto:${student.teammate_email}`} className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
+                    {student.teammate_email || "N/A"}
+                  </a>
+                </div>
+                <div>
+                  <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Contact Number</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="font-mono text-slate-800 dark:text-slate-200">{student.teammate_phone || "N/A"}</span>
+                    {student.teammate_phone && (
+                      <a
+                        href={whatsapp(student.teammate_phone)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200"
+                      >
+                        <MessageCircle size={10} /> WhatsApp
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Department & Semester</span>
+                  <span className="text-slate-800 dark:text-slate-200 font-medium">
+                    {student.teammate_department || "Computer Science"} · {student.teammate_semester || "N/A"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Payment Deposit Receipt Preview */}
+        <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-[#0c1424] border border-slate-200 dark:border-slate-800 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-slate-900 dark:text-slate-100">
+              Payment Deposit Slip / Receipt
+            </span>
+            {receiptUrl ? (
+              <button
+                type="button"
+                onClick={() => onOpenReceipt(student.full_name, receiptUrl)}
+                className="text-[11px] font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 cursor-pointer"
+              >
+                <Eye size={12} /> View Full Receipt
+              </button>
+            ) : (
+              <span className="text-slate-400 italic text-[11px]">No receipt uploaded</span>
+            )}
+          </div>
+          {receiptUrl && (
+            <div
+              className="w-full h-32 rounded border border-slate-200 dark:border-slate-700 overflow-hidden bg-white dark:bg-slate-900 flex items-center justify-center cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => onOpenReceipt(student.full_name, receiptUrl)}
+            >
+              {student.payment_receipt_url?.endsWith(".pdf") ? (
+                <div className="flex flex-col items-center gap-1 text-slate-500 text-xs">
+                  <FileText size={24} className="text-blue-600" />
+                  <span>Click to view PDF deposit receipt</span>
+                </div>
+              ) : (
+                <img
+                  src={receiptUrl}
+                  alt="Deposit receipt"
+                  className="w-full h-full object-contain"
+                />
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Project Submissions & Code */}
+        <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-[#0c1424] border border-slate-200 dark:border-slate-800 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-slate-900 dark:text-slate-100">
+              Project Submissions & Code Files
+            </span>
+            {submission ? (
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300">
+                Submitted ({submission.graded ? `${submission.total_marks}/100 Marks` : "Awaiting Evaluation"})
+              </span>
+            ) : (
+              <span className="text-slate-400 italic text-[11px]">No submission yet</span>
+            )}
+          </div>
+
+          {submission ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-0.5 text-xs">
+              {submission.github_url && (
+                <a
+                  href={submission.github_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 p-2 rounded bg-white dark:bg-[#101a2b] border border-slate-200 dark:border-slate-700 hover:border-blue-400 text-slate-800 dark:text-slate-200 transition-colors font-medium"
+                >
+                  <Github size={14} className="text-slate-700 dark:text-slate-300" />
+                  <span className="truncate">GitHub Repo</span>
+                  <ExternalLink size={11} className="ml-auto text-slate-400" />
+                </a>
+              )}
+              {submission.drive_folder_url && (
+                <a
+                  href={submission.drive_folder_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2 p-2 rounded bg-white dark:bg-[#101a2b] border border-slate-200 dark:border-slate-700 hover:border-blue-400 text-slate-800 dark:text-slate-200 transition-colors font-medium"
+                >
+                  <GoogleDriveIcon size={14} />
+                  <span className="truncate">Drive Folder</span>
+                  <ExternalLink size={11} className="ml-auto text-slate-400" />
+                </a>
+              )}
+              {submission.storage_archive_url && (
+                <a
+                  href={submission.storage_archive_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  download={`${(student.full_name || "student").replace(/[^a-zA-Z0-9_-]/g, "_")}_project.zip`}
+                  className="flex items-center gap-2 p-2 rounded bg-white dark:bg-[#101a2b] border border-emerald-200 dark:border-emerald-800 hover:border-emerald-400 text-emerald-700 dark:text-emerald-300 transition-colors font-medium"
+                >
+                  <Download size={14} />
+                  <span className="truncate">Download ZIP</span>
+                </a>
+              )}
+            </div>
+          ) : (
+            <p className="text-[11px] text-slate-500">
+              No code files or GitHub links submitted yet.
+            </p>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onDirectEmail(student)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition-colors cursor-pointer"
+            >
+              <Mail size={13} /> Direct Email
+            </button>
+            <button
+              type="button"
+              disabled={busy === `reset-${student.id}`}
+              onClick={() => onResetPassword(student)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 transition-colors cursor-pointer"
+            >
+              <KeyRound size={13} /> Send Reset Link
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {student.status !== "approved" && (
+              <Button
+                size="sm"
+                disabled={busy === student.id}
+                onClick={() => {
+                  onReview(student.id, "approved");
+                  onClose();
+                }}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold"
+              >
+                <Check size={14} className="mr-1" /> Approve {isTeam ? "Team" : "Student"}
+              </Button>
+            )}
+            {student.status !== "rejected" && (
+              <Button
+                size="sm"
+                variant="destructive"
+                disabled={busy === student.id}
+                onClick={() => {
+                  onReview(student.id, "rejected");
+                  onClose();
+                }}
+                className="text-xs font-bold"
+              >
+                <X size={14} className="mr-1" /> Reject
+              </Button>
+            )}
+            <Button size="sm" variant="outline" onClick={onClose} className="text-xs cursor-pointer">
+              Close
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
 export function StudentsPage() {
   const { data, demo, update, refresh, notify } = useApp();
   const [search, setSearch] = useState("");
@@ -372,6 +710,7 @@ export function StudentsPage() {
   const [perPage, setPerPage] = useState(10);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [selectedStudent, setSelectedStudent] = useState<Profile | null>(null);
   // Direct student email state
   const [directStudent, setDirectStudent] = useState<any | null>(null);
   const [directSubject, setDirectSubject] = useState("");
@@ -809,6 +1148,8 @@ export function StudentsPage() {
                 <div
                   key={s.id}
                   className="students-grid-row"
+                  onClick={() => setSelectedStudent(s)}
+                  title="Click to view full student/team details"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "minmax(200px, 1.8fr) minmax(130px, 1.2fr) minmax(100px, 0.9fr) minmax(150px, 1.3fr) minmax(160px, 1.4fr)",
@@ -816,6 +1157,7 @@ export function StudentsPage() {
                     padding: "12px 14px",
                     alignItems: "center",
                     borderRadius: "4px",
+                    cursor: "pointer",
                   }}
                 >
                   <div>
@@ -896,6 +1238,7 @@ export function StudentsPage() {
                               href={sub.github_url}
                               target="_blank"
                               rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
                               title="Open GitHub Repository"
                               className="students-action-btn"
                               style={{
@@ -915,6 +1258,7 @@ export function StudentsPage() {
                               href={sub.drive_folder_url}
                               target="_blank"
                               rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
                               title="Open Student Google Drive Folder"
                               className="students-action-btn"
                               style={{
@@ -934,6 +1278,7 @@ export function StudentsPage() {
                               href={sub.storage_archive_url}
                               target="_blank"
                               rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
                               download={`${(s.full_name || "student").replace(/[^a-zA-Z0-9_-]/g, "_")}_${(s.email || "user").replace(/[^a-zA-Z0-9_@-]/g, "_")}_vspark_project.zip`}
                               title="Download Project Source Code ZIP"
                               className="students-action-btn"
@@ -958,12 +1303,37 @@ export function StudentsPage() {
 
                   <div>
                     <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
+                      {/* View Full Details Button */}
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedStudent(s);
+                        }}
+                        title={`View complete details for ${s.full_name}`}
+                        className="students-action-btn"
+                        style={{
+                          width: "28px",
+                          height: "28px",
+                          borderRadius: "6px",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          cursor: "pointer",
+                          flexShrink: 0,
+                          color: "#475569",
+                        }}
+                      >
+                        <Eye size={13} />
+                      </button>
+
                       {/* WhatsApp Circular Button */}
                       {s.phone_no && (
                         <a
                           href={whatsapp(s.phone_no)}
                           target="_blank"
                           rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
                           title={`Chat on WhatsApp (${s.phone_no})`}
                           style={{
                             width: "28px",
@@ -988,7 +1358,8 @@ export function StudentsPage() {
                       {/* Direct Email Button */}
                       <button
                         type="button"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setDirectStudent(s);
                           setDirectSubject("Important Notice regarding your VSpark Participation");
                           setDirectMessage("");
@@ -1014,7 +1385,10 @@ export function StudentsPage() {
                       <button
                         type="button"
                         disabled={busy === `reset-${s.id}`}
-                        onClick={() => handleSendPasswordReset(s)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSendPasswordReset(s);
+                        }}
                         title={`Send password reset email to ${s.email}`}
                         className="students-action-btn"
                         style={{
@@ -1040,7 +1414,8 @@ export function StudentsPage() {
                       <button
                         type="button"
                         className="students-action-btn"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setReceiptModal({
                             isOpen: true,
                             studentName: s.full_name,
@@ -1071,7 +1446,10 @@ export function StudentsPage() {
                           size="sm"
                           variant="outline"
                           disabled={busy === s.id}
-                          onClick={() => review(s.id, "approved")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            review(s.id, "approved");
+                          }}
                           title={s.participation_type === "team" ? "Approve Team (Both Members)" : "Approve Student"}
                           style={{ padding: "4px 8px", fontSize: "11px", height: "28px", borderRadius: "6px" }}
                         >
@@ -1085,7 +1463,10 @@ export function StudentsPage() {
                           variant="ghost"
                           disabled={busy === s.id}
                           aria-label={`Reject ${s.full_name}`}
-                          onClick={() => review(s.id, "rejected")}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            review(s.id, "rejected");
+                          }}
                           style={{ width: "28px", height: "28px", borderRadius: "6px" }}
                         >
                           <X size={14} />
@@ -1305,6 +1686,36 @@ export function StudentsPage() {
         onClose={() => setReceiptModal((prev) => ({ ...prev, isOpen: false }))}
         studentName={receiptModal.studentName}
         receiptUrl={receiptModal.receiptUrl}
+      />
+
+      {/* Comprehensive Student & Team Detail Modal */}
+      <StudentDetailModal
+        student={selectedStudent}
+        submission={
+          selectedStudent
+            ? data.submissions.find(
+                (sub) =>
+                  sub.profile_id === selectedStudent.id ||
+                  (selectedStudent.team_id &&
+                    data.students.some(
+                      (other) =>
+                        other.team_id === selectedStudent.team_id &&
+                        other.id === sub.profile_id
+                    ))
+              ) || null
+            : null
+        }
+        onClose={() => setSelectedStudent(null)}
+        onReview={review}
+        onResetPassword={handleSendPasswordReset}
+        onDirectEmail={(st) => {
+          setDirectStudent(st);
+          setSelectedStudent(null);
+        }}
+        onOpenReceipt={(name, url) =>
+          setReceiptModal({ isOpen: true, studentName: name, receiptUrl: url })
+        }
+        busy={busy}
       />
     </Workspace>
   );

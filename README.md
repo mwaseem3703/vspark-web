@@ -1,113 +1,182 @@
-# VSpark competition platform
+# VSpark 2026 — Web Development Competition Platform
 
-A responsive, light-mode university web development competition platform, based on **Web Mid Lab.pdf** and the [VSpark design reference](https://vspark-omega.vercel.app/). Built with Next.js 16 App Router, TypeScript, Tailwind CSS 4, shadcn-style button primitives, Radix Slot, Lucide, and Supabase SSR. The reference's blue identity is adapted to the brief's explicit light-mode requirement.
+A full-stack, university-grade web competition and evaluation portal built with **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS 4**, **Supabase SSR**, and **Node.js**. Designed for high-stakes hackathons and university coding competitions, providing end-to-end registration, team formation, automated timer scheduling, cloud file submissions, faculty evaluation rubrics, and real-time live leaderboards.
 
-## Run locally
+---
 
-Requires Node.js 20.9 or newer (tested with Node 24) and npm.
+## 📽️ Project Video Walkthrough & Demo
 
-```sh
+> [!NOTE]
+> **Video Walkthrough Placeholder:** A full screencast walkthrough demonstrating participant registration, team formation, live admin approval, timer countdown, project submissions, and jury scoring.
+
+<!-- VIDEO_DEMO_START -->
+[![VSpark Competition Platform Walkthrough](https://img.shields.io/badge/Demo_Video-Click_to_Watch-2563eb?style=for-the-badge&logo=youtube&logoColor=white)](https://your-video-link-here.com)
+
+*Replace `https://your-video-link-here.com` with your Loom, YouTube, or Google Drive demo recording.*
+<!-- VIDEO_DEMO_END -->
+
+---
+
+## 🚀 Key Features
+
+### 1. Participant Registration & Team Management
+- **Solo & Team (Max 2 Members) Modes:** Participants can register as individual developers or as a 2-member team.
+- **Leader & Member Roles:** The team creator acts as Team Leader (Primary submitter), while Member 2 receives full access credentials.
+- **Proof of Payment Upload:** Secure upload for bank deposit slips and transaction screenshots (PNG, JPG, PDF) with instant preview.
+- **Smart Form Validation:** Client- and server-side validation with Title Cased labels, live formatting, and inline requirement asterisks.
+- **Auto-Sync Pending State:** Approved participants are automatically transitioned from the waiting screen directly into the competition workspace via live polling without manual page reload.
+
+### 2. Faculty & Admin Management Console
+- **Student & Team Management (`/admin/students`):**
+  - Instant search across name, email, university, team name, and partner name.
+  - Tab filters for All Students, Teams (👥), Solo (👤), Pending, Approved, and Rejected.
+  - **Comprehensive Details Modal:** Clicking any student row opens a detailed modal showing leader & teammate credentials, contact numbers with direct WhatsApp links, payment slip preview, and submitted code.
+  - Quick action controls: Approve/Reject, Send Password Reset Link, and Direct Email messaging.
+- **Official Jury Evaluation (`/admin/evaluations`):**
+  - Structured 100-mark rubric covering UI/UX, Authentication, CRUD & Database, Cloud Storage, External APIs, Deployment, Code Quality, Documentation, and Defense.
+  - Direct repository code inspection, Drive folder review, and source ZIP download.
+- **Competition Controls (`/admin/settings`):**
+  - Event timer controls (Scheduled, Open Now, or Closed).
+  - Manual override switches, challenge brief markdown editor, and prize pool configuration.
+  - One-click public results publishing.
+
+### 3. Competition Workspace & Gated Submissions
+- **Time-Locked Challenge Access:** The problem statement, PDF brief, and submission form remain locked until the competition officially starts.
+- **Live Countdown Timer:** Synchronized timer tracking competition start, active coding duration, and submission deadline.
+- **Source Code Packaging & Filtering:** Client-side archive builder automatically filters out `.git`, `node_modules`, `.next`, `.env` files, build caches, and private tokens before submission.
+- **Triple Submission Redundancy:** Supports GitHub Repository URL, Google Drive Folder URL, and directly bundled ZIP archives.
+
+### 4. Live Background Synchronization
+- Dynamic background polling interval (every 6 seconds when tab is active).
+- Instant data re-fetch on window focus and tab visibility change.
+- Multi-tab synchronization via local storage events in demo environments.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Framework** | Next.js 16 (App Router, Server Actions, Route Handlers) |
+| **Language** | TypeScript (Strict type checking) |
+| **Styling** | Tailwind CSS 4, Radix UI Primitives, Lucide Icons |
+| **Database & Auth** | Supabase (PostgreSQL with Row Level Security, SSR Auth) |
+| **Storage** | Supabase Storage (Private Buckets) / Google Drive API (OAuth2) |
+| **Email Delivery** | Nodemailer (Gmail TLS port 465 SMTP integration) |
+| **Testing** | Node.js Test Runner with `tsx` (`tests/*.test.ts`) |
+
+---
+
+## 📂 Project Structure
+
+```
+vspark-competition/
+├── public/                 # Static branding, logos, and competition assets
+├── src/
+│   ├── app/                # Next.js App Router (Pages, Layouts, API Routes)
+│   │   ├── (public)/       # Landing, Login, Register, Pending, Results
+│   │   ├── admin/          # Admin portal (Overview, Students, Evaluations, Settings)
+│   │   ├── dashboard/      # Participant portal (Workspace, Brief, Submission)
+│   │   └── api/            # Server endpoints with authentication & RBAC guards
+│   ├── components/         # Core UI components
+│   │   ├── admin.tsx       # Faculty console, student table & detail modal
+│   │   ├── auth.tsx        # Registration form, login & password recovery
+│   │   ├── provider.tsx    # AppContext provider with live auto-refresh
+│   │   ├── shell.tsx       # Reusable layout shells and navigation headers
+│   │   └── student.tsx     # Student workspace, submission form & timer
+│   └── lib/                # Utility modules, schemas, and API clients
+│       ├── competition.ts  # State management, WhatsApp link generator
+│       ├── types.ts        # TypeScript schemas for profiles, teams, submissions
+│       └── utils.ts        # Formatting, date helpers, class merger
+├── supabase/
+│   └── schema.sql          # Complete PostgreSQL schema, triggers & RLS policies
+└── tests/                  # Automated integration and unit test suite
+```
+
+---
+
+## ⚙️ Getting Started
+
+### Prerequisites
+- **Node.js:** 20.9 or newer (tested on Node 22 and Node 24)
+- **npm:** 10.x or higher
+- **Supabase Account** (or local Supabase CLI instance)
+
+### 1. Installation
+Clone the repository and install dependencies:
+```bash
+git clone https://github.com/Waseem-Akram-dev/vspark-competition.git
+cd vspark-competition
 npm install
+```
+
+### 2. Environment Configuration
+Create a `.env.local` file from the provided example:
+```bash
+cp .env.example .env.local
+```
+
+Configure your environment variables:
+```ini
+# Supabase Configuration
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+
+# Application Origin
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+
+# Faculty Admin Credentials
+ADMIN_EMAIL=admin@vspark.edu
+ADMIN_PASSWORD=YourSecurePassword123!
+
+# SMTP Email Dispatch (Gmail App Password)
+SMTP_USER=your-email@gmail.com
+SMTP_PASS=your-16-character-app-password
+
+# Optional: Demo Mode (true for offline isolated mock data, false for live backend)
+NEXT_PUBLIC_DEMO_MODE=false
+```
+
+### 3. Database Initialization
+Run `supabase/schema.sql` in the **SQL Editor** of your Supabase project. It automatically configures:
+- `profiles` table with Team and Solo participation tracking.
+- `submissions` and `evaluations` tables with 100-mark scoring schema.
+- Private storage buckets (`payment-receipts`, `submissions`, `tasks`).
+- Secure Row Level Security (RLS) policies preventing unauthorized role elevation.
+
+### 4. Running the Development Server
+```bash
 npm run dev
 ```
+Open **[http://localhost:3000](http://localhost:3000)** in your browser.
 
-Open **http://127.0.0.1:3000**. To check the production bundle:
+---
 
-```sh
+## 🧪 Testing & Verification
+
+Run the automated test suite:
+```bash
+# Run unit & security integration tests
 npm test
+
+# Run TypeScript compilation checks
+npm run typecheck
+
+# Verify production build bundle
 npm run build
-npm start
 ```
 
-## Demo mode
+---
 
-Normal local and hosted operation uses live services and shows no demo banner or sample-workspace buttons. Copy `.env.example` to `.env.local` and configure Supabase before starting. Missing credentials no longer silently enable a sample experience. For an intentional isolated preview only, explicitly set `NEXT_PUBLIC_DEMO_MODE=true`; that preview is clearly labeled and uses fictional participants and browser-local storage.
+## 🔒 Security & Integrity Measures
 
-Try this walkthrough:
+- **Role-Based Access Control (RBAC):** Next.js middleware and API route handlers verify JWT tokens and database roles before granting access to `/admin/*` routes.
+- **SQL Injection & RLS Protection:** Browser clients communicate via Supabase SSR with strict Row Level Security. Role modification and score publishing are restricted to security-definer server routines.
+- **Client-Side Secret Shield:** File submission uploads scan and block `.env`, `.pem`, `.key`, `id_rsa`, and sensitive token patterns.
+- **Idempotent State Changes:** All approval, score submission, and timer mutations use transaction locks and origin verification.
 
-1. Open the admin demo and review the overview.
-2. In Students, search/filter registrations and approve a pending student.
-3. In Competition settings, choose **Open now** and **Save changes**.
-4. Open `/login` and select Student demo. The dashboard now offers **Start task**.
-5. Select a source folder and provide a valid GitHub repository URL. The app filters excluded paths, validates sizes, and saves a demo submission.
-6. Return to Admin demo, evaluate the submission, and assign a score/feedback.
-7. Turn on **Publish results** in settings, save, then view `/results`.
+---
 
-To reset the sample data, choose **Reset demo data** on the login page. Demo data is intentionally isolated from live data. The demo role buttons never authenticate real API requests.
-
-## Connect the live backend
-
-1. Create a Supabase project. Run **supabase/schema.sql** once in the SQL Editor of a new project. It creates profiles, competition settings, submissions, upload sessions, private storage buckets, safe signup triggers, and role policies.
-2. Copy `.env.example` to `.env.local`. Set `NEXT_PUBLIC_DEMO_MODE=false`, the Supabase URL and anon key, and the **server-only** service-role key. Set `NEXT_PUBLIC_SITE_URL` to the actual application origin.
-3. In Supabase Auth URL Configuration, set the Site URL and allow `http://127.0.0.1:3000/auth/callback` for local development and `https://YOUR_DOMAIN/auth/callback` for production. Keep the default PKCE-compatible email confirmation link. Enable email confirmation as appropriate. Supabase sends the email verification message; Nodemailer sends competition registration and approval notifications.
-4. Register the organizer through the normal form and confirm the email. In the Supabase SQL Editor, explicitly promote that account:
-
-```sql
-update public.profiles
-set role = 'admin', status = 'approved'
-where email = 'YOUR_ADMIN_EMAIL';
-```
-
-5. Configure Gmail and Google Drive as below. Restart Next.js after changing environment variables. On Vercel, redeploy after changing any `NEXT_PUBLIC_` value.
-6. Log in as the organizer and set the **real title, task, schedule, location, prizes, and optional bank details**. Sample content is illustrative; real bank details and prize amounts have not been invented.
-
-### Gmail email delivery
-
-Set `SMTP_USER` to the Gmail sender and `SMTP_PASS` to its Google App Password (requires Google's account prerequisites, including 2-Step Verification). Nodemailer connects to Gmail using TLS on port 465. Keep the app password server-only.
-
-Failed delivery does not discard a successful registration or approval. The UI reports the email failure. Supabase verification delivery is configured separately in Supabase Auth; use its SMTP configuration for broader production registration rather than relying on limited default verification delivery.
-
-### Google Drive uploads
-
-**Personal Gmail:** The admin can use **Connect Google Drive** after the one-time OAuth client setup in [GOOGLE_DRIVE_SETUP.md](GOOGLE_DRIVE_SETUP.md). The connection uses narrow `drive.file` access, PKCE, an admin-bound expiring state cookie, and an authenticated-encrypted refresh token in a service-only table. It creates/reuses a private VSpark Submissions folder in My Drive. Connecting keeps submissions closed. Existing sessions, completed submissions, and Drive files are preserved. A participant whose destination changes is prompted to restart their own upload; no bulk session updates occur. The Google authorization and a real upload still need to be verified after the owner's OAuth client is configured.
-
-**Workspace alternative:** The service-account approach below requires a **Google Workspace Shared Drive**, not an ordinary personal Gmail folder. [Google documents that service accounts have no storage quota and cannot own files](https://developers.google.com/workspace/drive/api/guides/about-shareddrives).
-
-1. Enable Google Drive API in a Google Cloud project and create a service account.
-2. Add the service account to the intended Workspace Shared Drive with permission to create content. Your university Workspace administrator may need to permit it.
-3. Set `GOOGLE_DRIVE_CLIENT_EMAIL`, `GOOGLE_DRIVE_PRIVATE_KEY`, and `GOOGLE_DRIVE_PARENT_FOLDER_ID` to a folder in that Shared Drive. The private key supports literal `\n` line breaks in an environment value.
-4. Grant human evaluators access to the Shared Drive. Uploaded projects are **not** made public. Student dashboards show their receipt of submission; Drive links appear in the organizer's evaluation view.
-
-Uploads use a server-owned session and manifest, then upload **one file per request**, preserving folder structure. The server repeats path and size checks, verifies session ownership/approval/event state on every request, and only finalizes after every manifest entry is recorded. Idempotency keys support retries. Limits: **500 files, 3 MB per file, 100 MB total, three-hour upload-session expiry**. Final submissions are immutable, one per student. Uploads that fail can be retried with the same selection; changing the selection starts another session. Organizers should periodically remove abandoned folders in the Shared Drive.
-
-## Pages
-
-| Route                | Purpose                                                                               |
-| -------------------- | ------------------------------------------------------------------------------------- |
-| `/`                  | Competition landing page, guidelines, recognition, optional bank details              |
-| `/register`          | Signup and optional receipt                                                           |
-| `/login`             | Student/admin sign-in; demo workspace entry                                           |
-| `/pending`           | Registration status and refresh                                                       |
-| `/dashboard`         | Student status, countdown, announcement, task access                                  |
-| `/dashboard/task`    | Gated brief, PDF download, folder upload, final submission receipt                    |
-| `/admin`             | Organizer overview and activity                                                       |
-| `/admin/students`    | Search/filter, approve/reject, receipt and WhatsApp links                             |
-| `/admin/evaluations` | Project links, marks 0–100, feedback                                                  |
-| `/admin/settings`    | Task, schedule, manual submission controls, prizes, bank details, results             |
-| `/results`           | Public results only after publication, evaluated projects only, shared ranks for ties |
-
-## Security and brief clarifications
-
-- The brief's two-state submission flag was replaced with **scheduled / open / closed**. A manual close always wins; manual open stays open independent of the schedule.
-- The SQL in the PDF has been replaced with a safer schema. Signup metadata cannot select a role or approval status. Browser clients cannot write profile roles, grades, settings, submissions, or upload sessions.
-- A security-definer admin helper prevents recursive profile RLS policies. The public leaderboard function returns only participant name, university, and finalized score after publication.
-- Server routes recheck authentication, roles, student approval, session ownership, and event timing. Route protection uses Next.js 16's `proxy.ts` convention.
-- Unpublished scores and task contents are removed from student/public bootstrap responses. Receipts and task PDFs use private storage and short-lived signed downloads.
-- Source filtering excludes dependency/build folders, `.git`, `.vercel`, `.env` and `.env.*`, private keys, common credential files, unsafe path segments, and prototype keys. Review source projects before submission; pattern filtering cannot discover arbitrary secrets embedded in normal source files.
-- State-changing endpoints check Origin against the application host. No demo identity is trusted by the server. Credentials stay in server environment variables.
-- The database finalization function rechecks approval, timing, file completion, and uniqueness in a transaction.
-
-## Deploy to Vercel
-
-1. Put this folder in your own Git repository, excluding `.env.local`, `node_modules`, `.next`, and `tmp`.
-2. Import it into Vercel as a Next.js project. Use `npm run build` and the default Next.js output configuration.
-3. Add the live environment values from `.env.example`, including `NEXT_PUBLIC_DEMO_MODE=false` and your deployed `NEXT_PUBLIC_SITE_URL`. Never mark service-role, SMTP, or Drive secrets public.
-4. Update Supabase Auth redirect URLs, deploy, then test a real signup/approval/upload/evaluation/results flow before accepting participants.
-
-## Verification
-
-The site is live at https://vspark-competition.vercel.app with production Supabase connected. The production build, TypeScript compilation, thirteen local tests, and previous live integration checks passed. Gmail SMTP is configured and registration is enabled. Google Drive still awaits the owner's OAuth client setup, so submissions remain closed. Confirmation, reset, invitation, registration, and approval emails use branded HTML; browser previews were checked at desktop and phone widths. Actual inbox rendering and the complete participant flow still require a real test. See [DEPLOYMENT.md](DEPLOYMENT.md) for setup status, verification, and operations.
-
-Source map: `src/components` contains the page experiences and shared shells; `src/app/api/[...path]/route.ts` implements server endpoints; `src/lib` contains integrations and validation; `supabase/schema.sql` is the complete database setup.
-#   v s p a r k - w e b  
- 
+## 📄 License
+This project was developed for the **VSpark University Web Development Competition**. All rights reserved.

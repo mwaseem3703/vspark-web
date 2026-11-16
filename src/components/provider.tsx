@@ -85,17 +85,20 @@ export function Provider({
       return () => clearTimeout(t);
     }
   }, [toast]);
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (silent = false) => {
     if (!demo) {
       try {
         const next = await request("bootstrap");
         setData(next);
         setError("");
       } catch (e) {
-        setError((e as Error).message);
+        if (!silent) {
+          setError((e as Error).message);
+        }
       }
     }
   }, [demo]);
+
   useEffect(() => {
     if (demo) {
       try {
@@ -114,6 +117,56 @@ export function Provider({
       }
     }
     refresh().finally(() => setReady(true));
+  }, [demo, refresh]);
+
+  // Live Auto-Refresh Effect (Runs periodically in the background on Admin & User sides)
+  useEffect(() => {
+    // 1. Storage sync across browser tabs for demo mode
+    if (demo) {
+      const handleStorage = (e: StorageEvent) => {
+        if (e.key === KEY && e.newValue) {
+          try {
+            const parsed = JSON.parse(e.newValue);
+            if (parsed.settings) setData(parsed);
+          } catch {}
+        }
+      };
+      window.addEventListener("storage", handleStorage);
+      return () => window.removeEventListener("storage", handleStorage);
+    }
+
+    // 2. Real API background polling & visibility synchronization
+    let isPolling = false;
+    const poll = async () => {
+      if (isPolling) return;
+      if (typeof document !== "undefined" && document.hidden) return;
+      isPolling = true;
+      try {
+        await refresh(true);
+      } finally {
+        isPolling = false;
+      }
+    };
+
+    const interval = setInterval(poll, 6000); // Poll every 6 seconds
+
+    const onVisibilityChange = () => {
+      if (typeof document !== "undefined" && !document.hidden) {
+        poll();
+      }
+    };
+    const onFocus = () => {
+      poll();
+    };
+
+    window.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("focus", onFocus);
+    };
   }, [demo, refresh]);
   const update = (fn: (d: AppData) => AppData) =>
     setData((prev) => {

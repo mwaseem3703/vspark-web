@@ -7,3 +7,4 @@ tmp/
 .vercel/
 supabase/.temp/
 output/
+*.pdf

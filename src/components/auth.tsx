@@ -24,6 +24,8 @@ import {
   User,
   Users,
   UserCheck,
+  UserPlus,
+  GraduationCap,
 } from "lucide-react";
 import { Logo, PublicShell } from "./shell";
 import { useApp, request } from "./provider";
@@ -377,394 +379,262 @@ export function AuthPage({ register = false }: { register?: boolean }) {
     </div>
   );
 
-  // 1. REGISTER PAGE VIEW: CLEAN CENTERED FORM WITH DYNAMIC TEAM FIELDS BELOW
+  // 1. REGISTER PAGE VIEW: CLEAN, CONCISE & NO EXTRA CLUTTER
   if (register) {
     return (
       <PublicShell>
-        <div className="container max-w-4xl mx-auto py-8 px-4">
-          <div className="max-w-xl mx-auto">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 mb-6 transition-colors font-medium"
-            >
-              <ArrowLeft size={14} /> Back to home
-            </Link>
+        {/* TOP HERO BANNER */}
+        <section className="page-hero">
+          <div className="page-hero-inner container">
+            <h1>Register to compete</h1>
+            <p>
+              Create your participant account to access your competition workspace.
+            </p>
+          </div>
+        </section>
 
-            {/* Registration Form Card */}
-            <section className="bg-white dark:bg-[#101a2b] border border-slate-200/90 dark:border-[#1e293b] rounded-2xl p-6 sm:p-8 shadow-sm mb-12">
-              <div className="mb-6">
-                <div className="flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 tracking-wider uppercase mb-1.5">
-                  <Sparkles size={14} /> VSPARK 2026 REGISTRATION
-                </div>
-                <h1 className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-                  Web Development Competition
-                </h1>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Fill in your details below to register. Compete individually or with a teammate (Max 2 members).
-                </p>
+        {/* MAIN REGISTRATION SECTION: FORM CARD + ASIDE */}
+        <div className="container form-page">
+          {/* LEFT: FORM CARD */}
+          <section className="form-card">
+            <div className="form-card-head">
+              <div>
+                <h2>Participant Registration</h2>
+                <small>Fields marked * are required.</small>
               </div>
+            </div>
 
-              {/* Participation Mode Selection */}
-              <div className="mb-6">
-                <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-                  Participation Type <span className="text-red-500 font-bold leading-none">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-2.5 p-1 bg-slate-100 dark:bg-[#0c1424] rounded-lg border border-slate-200 dark:border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setParticipationType("individual");
-                      setError("");
-                    }}
-                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                      participationType === "individual"
-                        ? "bg-white dark:bg-[#1e293b] text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/60 dark:border-slate-700"
-                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-                    }`}
-                  >
-                    <User size={15} /> Individual (Solo)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setParticipationType("team");
-                      setError("");
-                    }}
-                    className={`flex items-center justify-center gap-2 py-2 px-3 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                      participationType === "team"
-                        ? "bg-white dark:bg-[#1e293b] text-blue-600 dark:text-blue-400 shadow-xs border border-slate-200/60 dark:border-slate-700"
-                        : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-                    }`}
-                  >
-                    <Users size={15} /> Team (Max 2 Members)
-                  </button>
-                </div>
-              </div>
+            {registrationPending && (
+              <p className="info-note mb-4" role="status">
+                Registration is opening soon. Please check back after the announcement.
+              </p>
+            )}
 
-              {registrationPending && (
-                <p className="info-note mb-6" role="status">
-                  Registration is opening soon. Please check back after the organizer’s announcement.
-                </p>
-              )}
-
-              <form onSubmit={submit} className="space-y-4">
-                <input type="hidden" name="participation_type" value={participationType} />
-
-                {/* TEAM NAME (Only when Team is selected) */}
-                {participationType === "team" && (
-                  <div>
-                    <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Team Name <span className="text-red-500 font-bold leading-none">*</span>
-                    </label>
-                    <input
-                      name="team_name"
-                      placeholder="e.g. CodeWarriors, DevCraft"
-                      required={participationType === "team"}
-                      maxLength={100}
-                      className="w-full h-10 px-3 text-xs rounded-md border border-blue-200 dark:border-blue-900/60 bg-blue-50/30 dark:bg-[#0c1424] text-slate-900 dark:text-slate-100 font-medium focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                )}
-
-                {/* SECTION 1: PARTICIPANT / TEAM LEADER DETAILS */}
-                {participationType === "team" && (
-                  <div className="flex items-center justify-between pt-2 pb-1 border-b border-slate-200 dark:border-slate-800">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-[10px]">
-                        1
-                      </span>
-                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                        Member 1 (Team Leader)
-                      </span>
-                    </div>
-                    <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900">
-                      Submitter
-                    </span>
-                  </div>
-                )}
-
-                <div>
-                  <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    {participationType === "team" ? "Leader Full Name" : "Full Name"} <span className="text-red-500 font-bold leading-none">*</span>
-                  </label>
+            <form onSubmit={submit}>
+              <div className="form-grid">
+                {/* Full Name */}
+                <label className="field">
+                  <span>Full Name <i>*</i></span>
                   <input
                     name="full_name"
-                    placeholder="e.g. Muhammad Ali"
+                    placeholder="e.g. Ayesha Khan"
                     required
                     maxLength={100}
                     autoComplete="name"
-                    className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
                   />
-                </div>
+                </label>
 
-                <div>
-                  <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    {participationType === "team" ? "Leader Email Address" : "Email Address"} <span className="text-red-500 font-bold leading-none">*</span>
-                  </label>
-                  <input
-                    name="email"
-                    placeholder="student@university.edu"
-                    required
-                    type="email"
-                    autoComplete="email"
-                    maxLength={254}
-                    className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    {participationType === "team" ? "Leader Phone Number" : "Phone Number"} <span className="text-red-500 font-bold leading-none">*</span>
-                  </label>
-                  <input
-                    name="phone_no"
-                    placeholder="0300 1234567"
-                    type="tel"
-                    required
-                    autoComplete="tel"
-                    className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                    University Name <span className="text-red-500 font-bold leading-none">*</span>
-                  </label>
+                {/* University */}
+                <label className="field">
+                  <span>University <i>*</i></span>
                   <input
                     name="university_name"
-                    placeholder="e.g. COMSATS University Islamabad, Vehari Campus"
+                    defaultValue="COMSATS University Islamabad, Vehari Campus"
+                    placeholder="University Name"
                     required
                     maxLength={150}
                     autoComplete="organization"
-                    className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
                   />
-                </div>
+                </label>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
-                    <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Department <span className="text-red-500 font-bold leading-none">*</span>
-                    </label>
-                    <select
-                      name="department"
-                      required
-                      defaultValue="Computer Science"
-                      className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                    >
-                      {DEPARTMENTS.map((d) => (
-                        <option key={d} value={d}>{d}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Semester <span className="text-red-500 font-bold leading-none">*</span>
-                    </label>
-                    <select
-                      name="semester"
-                      required
-                      defaultValue="6th Semester"
-                      className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                    >
-                      {SEMESTERS.map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+                {/* University Email */}
+                <label className="field">
+                  <span>Email Address <i>*</i></span>
+                  <input
+                    name="email"
+                    type="email"
+                    placeholder="you@example.com"
+                    required
+                    maxLength={254}
+                    autoComplete="email"
+                  />
+                </label>
 
-                {/* SECTION 2: MEMBER 2 (TEAMMATE) DETAILS (SHOWS UNDERNEATH ONLY WHEN TEAM IS SELECTED) */}
+                {/* Contact Number */}
+                <label className="field">
+                  <span>Contact Number <i>*</i></span>
+                  <input
+                    name="phone_no"
+                    type="tel"
+                    placeholder="0300 0000000"
+                    required
+                    autoComplete="tel"
+                  />
+                </label>
+
+                {/* Department */}
+                <label className="field">
+                  <span>Department <i>*</i></span>
+                  <select name="department" defaultValue="Computer Science" required>
+                    {DEPARTMENTS.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </label>
+
+                {/* Semester */}
+                <label className="field">
+                  <span>Semester <i>*</i></span>
+                  <select name="semester" defaultValue="6th Semester" required>
+                    {SEMESTERS.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </label>
+
+                {/* Participation Type Dropdown */}
+                <label className="field">
+                  <span>Participation Type <i>*</i></span>
+                  <select
+                    name="participation_type"
+                    value={participationType}
+                    onChange={(e) => {
+                      setParticipationType(e.target.value as "individual" | "team");
+                      setError("");
+                    }}
+                    required
+                  >
+                    <option value="individual">Individual</option>
+                    <option value="team">Team (2 Members)</option>
+                  </select>
+                </label>
+
+                {/* DYNAMIC TEAM FIELDS (ONLY VISIBLE WHEN TEAM IS SELECTED) */}
                 {participationType === "team" && (
-                  <div className="p-4 sm:p-5 rounded-xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200/80 dark:border-purple-900/50 space-y-3.5 mt-4">
-                    <div className="flex items-center justify-between pb-2 border-b border-purple-200/60 dark:border-purple-900/40">
-                      <div className="flex items-center gap-2">
-                        <span className="w-5 h-5 rounded-full bg-purple-600 text-white flex items-center justify-center font-bold text-[10px]">
-                          2
-                        </span>
-                        <strong className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                          Member 2 (Teammate Details)
-                        </strong>
-                      </div>
-                      <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/60 px-2 py-0.5 rounded">
-                        View-only Member
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Your teammate will receive their own login access and confirmation email.
-                    </p>
-
-                    <div>
-                      <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                        Teammate Full Name <span className="text-red-500 font-bold leading-none">*</span>
-                      </label>
+                  <>
+                    <label className="field">
+                      <span>Team Name <i>*</i></span>
                       <input
-                        name="teammate_name"
-                        placeholder="Teammate's full name"
+                        name="team_name"
+                        placeholder="Team Name"
                         required={participationType === "team"}
                         maxLength={100}
-                        className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
                       />
-                    </div>
+                    </label>
 
-                    <div>
-                      <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                        Teammate Email Address <span className="text-red-500 font-bold leading-none">*</span>
-                      </label>
+                    <label className="field">
+                      <span>Second Member Full Name <i>*</i></span>
+                      <input
+                        name="teammate_name"
+                        placeholder="Teammate's Full Name"
+                        required={participationType === "team"}
+                        maxLength={100}
+                      />
+                    </label>
+
+                    <label className="field">
+                      <span>Second Member Email <i>*</i></span>
                       <input
                         name="teammate_email"
                         type="email"
-                        placeholder="teammate@university.edu"
+                        placeholder="teammate@example.com"
                         required={participationType === "team"}
                         maxLength={254}
-                        className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
                       />
-                    </div>
+                    </label>
 
-                    <div>
-                      <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                        Teammate Phone Number <span className="text-red-500 font-bold leading-none">*</span>
-                      </label>
+                    <label className="field">
+                      <span>Second Member Phone <i>*</i></span>
                       <input
                         name="teammate_phone"
                         type="tel"
-                        placeholder="0300 1234567"
+                        placeholder="0300 0000000"
                         required={participationType === "team"}
-                        className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
                       />
-                    </div>
+                    </label>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div>
-                        <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                          Department <span className="text-red-500 font-bold leading-none">*</span>
-                        </label>
-                        <select
-                          name="teammate_department"
-                          required={participationType === "team"}
-                          defaultValue="Computer Science"
-                          className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                        >
-                          {DEPARTMENTS.map((d) => (
-                            <option key={d} value={d}>{d}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                          Semester <span className="text-red-500 font-bold leading-none">*</span>
-                        </label>
-                        <select
-                          name="teammate_semester"
-                          required={participationType === "team"}
-                          defaultValue="6th Semester"
-                          className="w-full h-10 px-3 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                        >
-                          {SEMESTERS.map((s) => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
+                    <label className="field">
+                      <span>Second Member Department <i>*</i></span>
+                      <select name="teammate_department" defaultValue="Computer Science" required={participationType === "team"}>
+                        {DEPARTMENTS.map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <label className="field">
+                      <span>Second Member Semester <i>*</i></span>
+                      <select name="teammate_semester" defaultValue="6th Semester" required={participationType === "team"}>
+                        {SEMESTERS.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </>
                 )}
 
-                {/* PASSWORDS */}
-                <div className="space-y-4 pt-2">
-                  <div>
-                    <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      {participationType === "team" ? "Team Account Password" : "Password"} <span className="text-red-500 font-bold leading-none">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        name="password"
-                        type={show ? "text" : "password"}
-                        placeholder="At least 8 characters"
-                        required
-                        minLength={8}
-                        maxLength={128}
-                        autoComplete="new-password"
-                        className="w-full h-10 px-3 pr-10 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShow(!show)}
-                        aria-label={show ? "Hide password" : "Show password"}
-                        className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                      >
-                        {show ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
-                    {participationType === "team" && (
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">
-                        Both team members will use their respective emails with this password to log in.
-                      </p>
-                    )}
+                {/* Passwords */}
+                <label className="field">
+                  <span>Create Password <i>*</i></span>
+                  <div className="relative">
+                    <input
+                      name="password"
+                      type={show ? "text" : "password"}
+                      placeholder="At least 8 characters"
+                      required
+                      minLength={8}
+                      maxLength={128}
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShow(!show)}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      aria-label={show ? "Hide password" : "Show password"}
+                    >
+                      {show ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
                   </div>
+                </label>
 
-                  <div>
-                    <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Confirm Password <span className="text-red-500 font-bold leading-none">*</span>
-                    </label>
-                    <div className="relative">
-                      <input
-                        name="confirm_password"
-                        type={showConfirm ? "text" : "password"}
-                        placeholder="Re-enter identical password"
-                        required
-                        minLength={8}
-                        maxLength={128}
-                        autoComplete="new-password"
-                        className="w-full h-10 px-3 pr-10 text-xs rounded-md border border-slate-300 dark:border-[#29364b] bg-white dark:bg-[#0d1527] text-slate-900 dark:text-slate-100 focus:outline-none focus:border-blue-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirm(!showConfirm)}
-                        aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
-                        className="absolute right-2 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                      >
-                        {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
-                      </button>
-                    </div>
+                <label className="field">
+                  <span>Confirm Password <i>*</i></span>
+                  <div className="relative">
+                    <input
+                      name="confirm_password"
+                      type={showConfirm ? "text" : "password"}
+                      placeholder="Re-enter password"
+                      required
+                      minLength={8}
+                      maxLength={128}
+                      autoComplete="new-password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm(!showConfirm)}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                      aria-label={showConfirm ? "Hide confirm password" : "Show confirm password"}
+                    >
+                      {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
                   </div>
-                </div>
+                </label>
 
-                {/* PAYMENT ACCOUNT & DEPOSIT SLIP */}
-                <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-800/50 space-y-3 pt-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <CreditCard size={16} className="text-emerald-600 dark:text-emerald-400" />
-                      <strong className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                        Payment Details ({feeAmount} per {participationType === "team" ? "team" : "participant"})
-                      </strong>
-                    </div>
-                    <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900 text-emerald-800 dark:text-emerald-200">
-                      {bankName}
+                {/* Payment Account Details & Receipt Dropzone */}
+                <div className="field-full p-3.5 rounded-lg bg-slate-50 dark:bg-[#0c1424] border border-slate-200 dark:border-slate-800 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      Entry Fee: <strong>{feeAmount}</strong> ({bankName})
                     </span>
-                  </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-3 p-2.5 rounded bg-white dark:bg-[#0d1527] border border-emerald-200/60 dark:border-emerald-900/40 text-xs">
-                    <div>
-                      <div className="text-[10px] text-slate-500">Account Title: <strong className="text-slate-800 dark:text-slate-200">{accountTitle}</strong></div>
-                      <div className="font-mono font-bold text-sm text-slate-900 dark:text-slate-100 mt-0.5">{accountNumber}</div>
-                    </div>
                     <button
                       type="button"
                       onClick={() => copyToClipboard(accountNumber)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded bg-blue-50 dark:bg-blue-950/70 text-blue-600 dark:text-blue-300 hover:bg-blue-100 transition-colors border border-blue-200 dark:border-blue-800 cursor-pointer"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
                     >
-                      {copiedAccount ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
-                      {copiedAccount ? "Copied!" : "Copy Account"}
+                      {copiedAccount ? <Check size={11} className="text-emerald-600" /> : <Copy size={11} />}
+                      {copiedAccount ? "Copied" : "Copy Account"}
                     </button>
                   </div>
 
-                  <div>
-                    <label className="flex items-center gap-1 text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
-                      Deposit Receipt / Screenshot <span className="text-red-500 font-bold leading-none">*</span>
-                      <span className="text-slate-400 lowercase font-normal ml-1">(PNG, JPG, or PDF · max 3 MB)</span>
-                    </label>
+                  <div className="text-[11px] text-slate-500">
+                    Title: <strong className="text-slate-700 dark:text-slate-300">{accountTitle}</strong> · Acc: <span className="font-mono font-medium text-slate-800 dark:text-slate-200">{accountNumber}</span>
+                  </div>
+
+                  <label className="field">
+                    <span>Payment Receipt / Screenshot <i>*</i></span>
                     <div className="file-drop receipt-drop">
-                      <Upload size={20} />
-                      <strong>{receipt || "Click to attach your deposit slip"}</strong>
+                      <Upload size={16} />
+                      <strong>{receipt || "Attach Deposit Slip"}</strong>
                       <span>PNG, JPG, or PDF · Up to 3 MB</span>
                       <input
                         type="file"
@@ -784,74 +654,89 @@ export function AuthPage({ register = false }: { register?: boolean }) {
                         }}
                       />
                     </div>
-                  </div>
+                  </label>
                 </div>
+              </div>
 
-                {error && (
-                  <div
-                    className="p-3 rounded-md bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs font-medium"
-                    role="alert"
-                  >
-                    {error}
-                  </div>
-                )}
+              {/* Rules Agreement Checkbox */}
+              <label className="checkline">
+                <input type="checkbox" required />
+                <span>
+                  I agree to the{" "}
+                  <Link href="/rules" className="inline-link">
+                    competition rules
+                  </Link>
+                  .
+                </span>
+              </label>
 
+              {error && (
+                <div
+                  className="p-3 my-2 rounded-md bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900/60 text-red-700 dark:text-red-300 text-xs font-medium"
+                  role="alert"
+                >
+                  {error}
+                </div>
+              )}
+
+              {/* Submit Action */}
+              <div className="form-submit">
                 <Button
-                  size="lg"
                   disabled={busy || registrationPending || (!demo && !ready)}
                   type="submit"
-                  className="w-full h-11 text-sm font-bold"
+                  className="h-10 px-6 text-xs font-bold"
                 >
-                  {busy ? (
-                    <>
-                      <span className="spinner mr-2" /> Creating Account…
-                    </>
-                  ) : (
-                    <>
-                      {participationType === "team" ? "Register Team (2 Members)" : "Create Account & Register"}
-                      <ArrowUpRight size={17} className="ml-1" />
-                    </>
-                  )}
+                  {busy ? "Creating Account…" : participationType === "team" ? "Register Team →" : "Create Account →"}
                 </Button>
+              </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2 text-xs text-slate-500 border-t border-slate-100 dark:border-slate-800">
-                  <span className="flex items-center gap-1.5">
-                    <ShieldCheck size={14} className="text-emerald-600" />
-                    Registrations verified by faculty administration.
-                  </span>
-                  <span>
-                    Already have an account?{" "}
-                    <Link href="/login" className="text-blue-600 font-bold hover:underline">
-                      Log in here &rarr;
-                    </Link>
-                  </span>
+              {/* Bottom Link */}
+              <div className="form-bottom">
+                <span>
+                  Already registered?{" "}
+                  <Link href="/login" className="inline-link font-semibold">
+                    Log in here &rarr;
+                  </Link>
+                </span>
+              </div>
+            </form>
+          </section>
+
+          {/* RIGHT: CLEAN SIDEBAR ASIDE */}
+          <aside className="form-aside">
+            <h3>Competition Info</h3>
+
+            <div className="space-y-1">
+              <div className="aside-detail">
+                <div>
+                  <b>120 minutes</b>
+                  <small>Timed challenge from task start.</small>
                 </div>
-              </form>
-            </section>
-          </div>
-
-          {/* GUIDELINES & REQUIREMENTS CARDS (BELOW THE REGISTRATION CARD) */}
-          <div className="pt-8 border-t border-slate-200 dark:border-slate-800">
-            <div className="max-w-xl mx-auto mb-6 text-center">
-              <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block">
-                Official Information & Guidelines
-              </span>
-              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 tracking-tight mt-1">
-                Competition Rules, Permitted Tech Stack & Evaluation Rubric
-              </h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Carefully review the official challenge regulations, rubric scoring breakdown, and submission freeze policies.
-              </p>
+              </div>
+              <div className="aside-detail">
+                <div>
+                  <b>1 or 2 members</b>
+                  <small>Individual or two-person team.</small>
+                </div>
+              </div>
+              <div className="aside-detail">
+                <div>
+                  <b>100 marks</b>
+                  <small>Evaluation rubric defined in rules.</small>
+                </div>
+              </div>
+              <div className="aside-detail">
+                <div>
+                  <b>Registration Fee</b>
+                  <small>{feeAmount} per team / participant.</small>
+                </div>
+              </div>
             </div>
-
-            {renderGuidelinesCards()}
-          </div>
+          </aside>
         </div>
       </PublicShell>
     );
   }
-
-
 
   // 2. LOGIN PAGE VIEW: CLASSIC SPLIT STORY + LOGIN PANEL
   return (
@@ -1114,6 +999,12 @@ export function PendingPage() {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const p = data.profile;
+
+  useEffect(() => {
+    if (ready && p?.status === "approved") {
+      router.replace("/dashboard/task");
+    }
+  }, [ready, p?.status, router]);
 
   return (
     <PublicShell>
