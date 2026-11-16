@@ -11,7 +11,7 @@ This is the path for an account that has **My Drive**, without Google Workspace 
 5. In **Data Access**, add only this Google Drive scope: `https://www.googleapis.com/auth/drive.file`. It limits access to files created or selected with the application; it does not grant access to every file in My Drive.
 6. In **Clients → Create client**, choose **Web application** and name it **VSpark Website**. Under **Authorized redirect URIs**, paste this exact URL:
 
-   `https://vspark-competition.vercel.app/auth/drive/callback`
+   `https://vspark-web.vercel.app/auth/drive/callback`
 
    JavaScript origins are not needed for this server callback flow. Do not use the Supabase callback URL for this connection.
 7. Create the client. Keep its **Client ID** and **Client secret** private. In your Vercel **vspark-competition** project, open **Settings → Environment Variables** and add these values for **Production**:

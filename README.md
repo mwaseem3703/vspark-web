@@ -4,7 +4,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4-38bdf8?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL_&_Auth-3ecf8e?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
-[![Vercel](https://img.shields.io/badge/Deploy-Vercel_Edge-black?style=for-the-badge&logo=vercel&logoColor=white)](https://vspark-competition.vercel.app)
+[![Vercel](https://img.shields.io/badge/Deploy-Vercel_Edge-black?style=for-the-badge&logo=vercel&logoColor=white)](https://vspark-web.vercel.app)
 [![Tests](https://img.shields.io/badge/Tests-13%2F13_Passed-brightgreen?style=for-the-badge&logo=node.js&logoColor=white)](https://github.com/mwaseem3703/vspark-web)
 
 A comprehensive, full-stack competition management, student workspace, and faculty evaluation portal engineered for academic hackathons and university web development contests. Built with **Next.js 16 (App Router)**, **TypeScript**, **Tailwind CSS 4**, **Supabase SSR**, and **Node.js**, providing automated registration, team formation, live 120-minute countdown scheduling, client-side code sanitization, dual-cloud persistence (Supabase Storage + Google Drive OAuth 2.0), flexible dual-mode faculty grading, and real-time live leaderboards.
@@ -26,10 +26,10 @@ A comprehensive, full-stack competition management, student workspace, and facul
 
 ## 🌐 Live Production Links
 
-- **Production Portal:** [https://vspark-competition.vercel.app](https://vspark-competition.vercel.app)
-- **Public Leaderboard & Results:** [https://vspark-competition.vercel.app/results](https://vspark-competition.vercel.app/results)
-- **Student Dashboard:** [https://vspark-competition.vercel.app/dashboard](https://vspark-competition.vercel.app/dashboard)
-- **Faculty Admin Console:** [https://vspark-competition.vercel.app/admin](https://vspark-competition.vercel.app/admin)
+- **Production Portal:** [https://vspark-web.vercel.app](https://vspark-web.vercel.app)
+- **Public Leaderboard & Results:** [https://vspark-web.vercel.app/results](https://vspark-web.vercel.app/results)
+- **Student Dashboard:** [https://vspark-web.vercel.app/dashboard](https://vspark-web.vercel.app/dashboard)
+- **Faculty Admin Console:** [https://vspark-web.vercel.app/admin](https://vspark-web.vercel.app/admin)
 - **GitHub Repository:** [https://github.com/mwaseem3703/vspark-web](https://github.com/mwaseem3703/vspark-web)
 
 ---
@@ -92,7 +92,7 @@ A comprehensive, full-stack competition management, student workspace, and facul
 - **Interactive Student Scorecard Modal:** Clicking any entry opens a comprehensive scorecard displaying individual rubric category marks, total grade, and faculty evaluation notes.
 
 ### 5. Automated Transactional Email Engine
-- **Production URL Sanitization:** All outgoing emails automatically replace any local references with the live production domain (`https://vspark-competition.vercel.app`).
+- **Production URL Sanitization:** All outgoing emails automatically replace any local references with the live production domain (`https://vspark-web.vercel.app`).
 - **Team Registration Emails:** Dispatched to both Leader and Teammate upon form submission.
 - **Team Approval Emails:** Personalized notification sent to both members when the faculty approves their account.
 - **Password Recovery Emails:** One-click secure reset links with pre-filled email parameters.
@@ -216,7 +216,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-supabase-service-role-key
 
 # Production Application Origin (Used for email links & callbacks)
-NEXT_PUBLIC_SITE_URL=https://vspark-competition.vercel.app
+NEXT_PUBLIC_SITE_URL=https://vspark-web.vercel.app
 
 # Faculty Administrator Account (Auto-provisioned on migration)
 ADMIN_EMAIL=aliblogspot769@gmail.com

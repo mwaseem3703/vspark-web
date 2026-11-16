@@ -7,6 +7,7 @@ import {
   Sparkles,
   Medal,
   Code2,
+  Users,
 } from "lucide-react";
 import { PublicShell, EmptyState } from "./shell";
 import { useApp } from "./provider";
@@ -112,8 +113,8 @@ export function ResultsPage() {
                           RANK {String(e.rank).padStart(2, "0")}
                         </span>
                         {isTeam && (
-                          <span style={{ fontSize: "10px", fontWeight: 700, padding: "1px 6px", borderRadius: "4px", backgroundColor: "#dbeafe", color: "#1e40af" }}>
-                            👥 Team
+                          <span className="inline-flex items-center gap-1" style={{ fontSize: "10px", fontWeight: 700, padding: "1px 6px", borderRadius: "4px", backgroundColor: "#dbeafe", color: "#1e40af" }}>
+                            <Users size={11} /> Team
                           </span>
                         )}
                       </div>
@@ -186,8 +187,8 @@ export function ResultsPage() {
                               {isTeam ? (
                                 <div>
                                   <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                                    <span style={{ fontSize: "10px", fontWeight: 700, padding: "1px 6px", borderRadius: "4px", backgroundColor: "#dbeafe", color: "#1e40af" }}>
-                                      👥 Team
+                                    <span className="inline-flex items-center gap-1" style={{ fontSize: "10px", fontWeight: 700, padding: "1px 6px", borderRadius: "4px", backgroundColor: "#dbeafe", color: "#1e40af" }}>
+                                      <Users size={11} /> Team
                                     </span>
                                     <strong style={{ fontSize: "13px" }}>{e.team_name}</strong>
                                   </div>

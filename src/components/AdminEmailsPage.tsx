@@ -108,7 +108,7 @@ export function AdminEmailsPage() {
 
       showNotification(
         "success",
-        `🎉 Task Announcement email successfully sent to ${resData.count} student(s)!`
+        `Task Announcement email successfully sent to ${resData.count} student(s)!`
       );
       setSuccessModal({
         isOpen: true,
@@ -159,7 +159,7 @@ export function AdminEmailsPage() {
 
       showNotification(
         "success",
-        `📢 Custom Announcement successfully sent to ${resData.count} student(s)!`
+        `Custom Announcement successfully sent to ${resData.count} student(s)!`
       );
       setSuccessModal({
         isOpen: true,
@@ -199,7 +199,7 @@ export function AdminEmailsPage() {
 
       showNotification(
         "success",
-        `🏆 ${resData.message || "Results emails dispatched successfully!"}`
+        resData.message || "Results emails dispatched successfully!"
       );
       setSuccessModal({
         isOpen: true,
@@ -442,10 +442,10 @@ export function AdminEmailsPage() {
             </span>
             <div className="flex flex-wrap gap-2">
               {[
-                "🚨 Final 30 Minutes: Complete Your GitHub Repository Submission!",
-                "🚀 VSpark 2026 Web Hackathon is Officially Starting!",
-                "💡 Submission Guidelines Reminder & Code Freeze Deadline",
-                "🏆 Submissions Closed: Evaluation Process Underway",
+                "Final 30 Minutes: Complete Your GitHub Repository Submission!",
+                "VSpark 2026 Web Hackathon is Officially Starting!",
+                "Submission Guidelines Reminder & Code Freeze Deadline",
+                "Submissions Closed: Evaluation Process Underway",
               ].map((preset, idx) => (
                 <button
                   key={idx}

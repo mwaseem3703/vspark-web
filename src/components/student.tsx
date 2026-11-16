@@ -38,6 +38,9 @@ import {
   Trophy,
   Upload,
   X,
+  Users,
+  Award,
+  Eye,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState, type InputHTMLAttributes } from "react";
@@ -105,12 +108,12 @@ export function StudentDashboard() {
         eyebrow="YOUR NEXT BIG THING STARTS HERE"
         title={
           data.profile?.participation_type === "team" && data.profile.team_name
-            ? `Welcome, Team ${data.profile.team_name} 👋`
-            : `Welcome back, ${data.profile?.full_name.split(" ")[0] || "builder"} 👋`
+            ? `Welcome, Team ${data.profile.team_name}`
+            : `Welcome back, ${data.profile?.full_name.split(" ")[0] || "builder"}`
         }
         description={
           data.profile?.participation_type === "team" && data.profile.team_name
-            ? `Team: ${data.profile.team_name} · ${data.profile.team_role === "leader" ? "👑 Leader (Submitter)" : "👥 Member"}`
+            ? `Team: ${data.profile.team_name} · ${data.profile.team_role === "leader" ? "Team Leader (Submitter)" : "Team Member"}`
             : "A little curiosity. A lot of potential. Let’s make something great."
         }
         action={
@@ -126,19 +129,20 @@ export function StudentDashboard() {
         <div className="p-4 mb-6 rounded-lg bg-blue-50/80 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <span className="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-sm">
-              👥
+              <Users size={16} />
             </span>
             <div>
               <div className="flex items-center gap-2">
                 <strong className="text-xs font-bold text-slate-900 dark:text-slate-100">
                   Team: {data.profile.team_name}
                 </strong>
-                <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold ${
                   data.profile.team_role === "leader"
                     ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
                     : "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200"
                 }`}>
-                  {data.profile.team_role === "leader" ? "👑 Team Leader (Submitter)" : "👥 Team Member"}
+                  {data.profile.team_role === "leader" ? <Award size={10} /> : <Users size={10} />}
+                  {data.profile.team_role === "leader" ? "Team Leader (Submitter)" : "Team Member"}
                 </span>
               </div>
               <p className="text-[11px] text-slate-600 dark:text-slate-400 mt-0.5">
@@ -146,10 +150,18 @@ export function StudentDashboard() {
               </p>
             </div>
           </div>
-          <div className="text-[11px] font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-[#0b1325] px-2.5 py-1 rounded border border-blue-100 dark:border-blue-900/50">
-            {data.profile.team_role === "leader"
-              ? "👑 You have submitter authority"
-              : "👁️ Member view (Leader submits files)"}
+          <div className="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-600 dark:text-slate-400 bg-white dark:bg-[#0b1325] px-2.5 py-1 rounded border border-blue-100 dark:border-blue-900/50">
+            {data.profile.team_role === "leader" ? (
+              <>
+                <Award size={12} className="text-blue-600 dark:text-blue-400" />
+                <span>You have submitter authority</span>
+              </>
+            ) : (
+              <>
+                <Eye size={12} className="text-slate-500" />
+                <span>Member view (Leader submits files)</span>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -747,8 +759,8 @@ export function TaskPage() {
               <div className="eyebrow">TEAM WORKSPACE</div>
               <h2>Member View</h2>
               <div className="p-6 rounded-lg bg-blue-50/80 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-900/60 text-center space-y-3.5 my-3">
-                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 flex items-center justify-center mx-auto text-xl font-bold">
-                  👥
+                <div className="w-12 h-12 rounded-full bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300 flex items-center justify-center mx-auto font-bold">
+                  <Users size={22} />
                 </div>
                 <div>
                   <h3 className="font-bold text-sm text-slate-900 dark:text-slate-100 mb-1">
@@ -1006,7 +1018,7 @@ export function TaskPage() {
                   <span className="font-semibold text-slate-800 dark:text-slate-200">
                     {data.profile?.participation_type === "team" && data.profile.team_name ? (
                       <>
-                        👥 Team {data.profile.team_name} ({data.profile.full_name})
+                        <Users size={12} className="inline mr-1 text-blue-600" /> Team {data.profile.team_name} ({data.profile.full_name})
                       </>
                     ) : (
                       <>

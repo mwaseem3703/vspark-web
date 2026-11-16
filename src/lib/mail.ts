@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { renderEmail } from "./email-template";
 
-export const PRODUCTION_SITE_URL = "https://vspark-competition.vercel.app";
+export const PRODUCTION_SITE_URL = "https://vspark-web.vercel.app";
 
 function getSiteUrl() {
   const envUrl = (

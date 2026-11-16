@@ -19,7 +19,7 @@ export function escapeEmail(value: string) {
       ]!,
   );
 }
-export const PRODUCTION_SITE_URL = "https://vspark-competition.vercel.app";
+export const PRODUCTION_SITE_URL = "https://vspark-web.vercel.app";
 
 function emailUrl(value: string) {
   if (value === "{{ .ConfirmationURL }}" || value === "{{ .SiteURL }}")

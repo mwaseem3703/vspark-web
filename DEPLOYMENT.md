@@ -1,6 +1,6 @@
 # Hosted deployment
 
-- Website: https://vspark-competition.vercel.app
+- Website: https://vspark-web.vercel.app
 - Vercel project: `vspark-competition`, team `ahmad5-cd9b` (Hobby).
 - Supabase project: `vspark-competition` (`ktvwewkqizwaazziesdv`, Tokyo).
 - Next.js functions use Vercel's Tokyo region (`hnd1`).
@@ -48,7 +48,7 @@ With explicit owner approval, the organizer account was created as an approved a
 ```sh
 vercel link --yes --project vspark-competition --scope ahmad5-cd9b
 vercel deploy --prod --yes --scope ahmad5-cd9b
-vercel inspect https://vspark-competition.vercel.app --scope ahmad5-cd9b
+vercel inspect https://vspark-web.vercel.app --scope ahmad5-cd9b
 ```
 
 Do not rerun the initial schema script against an existing database. Future database changes should use new reviewed migrations. For signup/auth troubleshooting, check both Vercel function logs and Supabase Auth logs.

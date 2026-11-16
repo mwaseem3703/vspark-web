@@ -30,7 +30,7 @@ test("personal Drive connection creates a private app folder and persists only e
     randomBytes(32).toString("base64");
   process.env.GOOGLE_DRIVE_OAUTH_CLIENT_ID = "test-client";
   process.env.GOOGLE_DRIVE_OAUTH_CLIENT_SECRET = "test-client-secret";
-  process.env.NEXT_PUBLIC_SITE_URL = "https://vspark-competition.vercel.app";
+  process.env.NEXT_PUBLIC_SITE_URL = "https://vspark-web.vercel.app";
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
   process.env.SUPABASE_SERVICE_ROLE_KEY = "synthetic-service-key";
   const originalFetch = globalThis.fetch;
@@ -93,7 +93,7 @@ test("personal Drive connection creates a private app folder and persists only e
 });
 test("Google authorization uses narrow file access, offline access, random state, and S256 PKCE", () => {
   process.env.GOOGLE_DRIVE_OAUTH_CLIENT_ID = "test-client";
-  process.env.NEXT_PUBLIC_SITE_URL = "https://vspark-competition.vercel.app";
+  process.env.NEXT_PUBLIC_SITE_URL = "https://vspark-web.vercel.app";
   const flow = driveAuthorization();
   const url = new URL(flow.url);
   assert.equal(url.origin, "https://accounts.google.com");
@@ -101,7 +101,7 @@ test("Google authorization uses narrow file access, offline access, random state
   assert.equal(url.searchParams.get("access_type"), "offline");
   assert.equal(
     url.searchParams.get("redirect_uri"),
-    "https://vspark-competition.vercel.app/auth/drive/callback",
+    "https://vspark-web.vercel.app/auth/drive/callback",
   );
   assert.equal(
     url.searchParams.get("code_challenge"),

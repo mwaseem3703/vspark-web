@@ -7,15 +7,15 @@ test("email content escapes participant data, validates links, and provides a bu
     subject: "Registration",
     heading: "Welcome",
     text: "Hi <img src=x onerror=alert(1)> & builder",
-    siteUrl: "https://vspark-competition.vercel.app",
+    siteUrl: "https://vspark-web.vercel.app",
     actionLabel: "Dashboard",
-    actionUrl: "https://vspark-competition.vercel.app/dashboard",
+    actionUrl: "https://vspark-web.vercel.app/dashboard",
   });
   assert.ok(!html.includes("<img src=x onerror=alert(1)>"));
   assert.ok(html.includes("&lt;img"));
   assert.ok(html.includes("&amp; builder"));
   assert.equal(
-    html.split('href="https://vspark-competition.vercel.app/dashboard"')
+    html.split('href="https://vspark-web.vercel.app/dashboard"')
       .length - 1,
     2,
   );
@@ -26,7 +26,7 @@ test("email content escapes participant data, validates links, and provides a bu
       subject: "test",
       heading: "test",
       text: "test",
-      siteUrl: "https://vspark-competition.vercel.app",
+      siteUrl: "https://vspark-web.vercel.app",
       actionLabel: "Open",
       actionUrl: "javascript:alert(1)",
     }),

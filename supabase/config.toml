@@ -6,8 +6,8 @@ site_url = "https://vspark-web.vercel.app"
 additional_redirect_urls = [
   "https://vspark-web.vercel.app/auth/callback",
   "https://vspark-web.vercel.app/auth/setup",
-  "https://vspark-competition.vercel.app/auth/callback",
-  "https://vspark-competition.vercel.app/auth/setup",
+  "https://vspark-web.vercel.app/auth/callback",
+  "https://vspark-web.vercel.app/auth/setup",
   "http://127.0.0.1:3000/auth/callback",
   "http://127.0.0.1:3000/auth/setup"
 ]

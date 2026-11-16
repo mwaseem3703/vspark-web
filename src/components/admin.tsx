@@ -4,15 +4,19 @@ import { useEffect, useState, useRef, useMemo, type FormEvent } from "react";
 import {
   ArrowUpRight,
   ArrowRight,
+  User,
   Users,
   UserCheck,
   ClipboardCheck,
   Trophy,
   Search,
   Check,
+  CheckCircle,
+  AlertCircle,
   X,
   MessageCircle,
   FileText,
+  FileSpreadsheet,
   Settings2,
   CircleCheck,
   Clock3,
@@ -447,7 +451,7 @@ function StudentDetailModal({
       onClick={onClose}
     >
       <div
-        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-[#101a2b] border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl p-6 space-y-4"
+        className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white dark:bg-[#101a2b] border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl p-6 space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -455,18 +459,19 @@ function StudentDetailModal({
           <div>
             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
               <span
-                className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${
                   isTeam
-                    ? "bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900"
-                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                    ? "bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900"
+                    : "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
                 }`}
               >
-                {isTeam ? "👥 Team Registration" : "👤 Solo Registration"}
+                {isTeam ? <Users size={12} /> : <User size={12} />}
+                {isTeam ? "Team Registration" : "Individual Registration"}
               </span>
               <StatusBadge status={student.status} />
             </div>
             <h2 className="text-xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
-              {isTeam ? `👥 Team: ${student.team_name}` : student.full_name}
+              {isTeam ? `Team ${student.team_name}` : student.full_name}
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
               {student.university_name}
@@ -484,62 +489,64 @@ function StudentDetailModal({
           </button>
         </div>
 
-        {/* Members Cards */}
-        <div className="space-y-3">
+        {/* Members Cards: Clean 2-column view for teams, stacked for solo */}
+        <div className={isTeam ? "grid grid-cols-1 md:grid-cols-2 gap-3.5" : "space-y-3"}>
           {/* Member 1 (Leader / Solo) */}
-          <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-[#0c1424] border border-slate-200 dark:border-slate-800">
-            <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-200/60 dark:border-slate-800 text-xs">
-              <span className="font-bold text-slate-900 dark:text-slate-100">
-                {isTeam ? "Member 1 (Team Leader & Submitter)" : "Participant Details"}
-              </span>
-              {isTeam ? (
-                <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950 px-1.5 py-0.5 rounded">
-                  👑 Leader
+          <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-[#0c1424] border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-200/60 dark:border-slate-800 text-xs">
+                <span className="font-bold text-slate-900 dark:text-slate-100">
+                  {isTeam ? "Member 1 (Leader)" : "Participant Details"}
                 </span>
-              ) : (
-                <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-400 bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded">
-                  👤 Solo
-                </span>
-              )}
-            </div>
+                {isTeam ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-700 dark:text-blue-300 bg-blue-100/70 dark:bg-blue-950 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900">
+                    <Award size={10} /> Leader
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-700 dark:text-slate-300 bg-slate-200 dark:bg-slate-800 px-2 py-0.5 rounded">
+                    <User size={10} /> Individual
+                  </span>
+                )}
+              </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-              <div>
-                <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Full Name</span>
-                <strong className="text-slate-900 dark:text-slate-100 text-[12.5px]">{leaderProfile.full_name}</strong>
-              </div>
-              <div>
-                <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Email Address</span>
-                <a href={`mailto:${leaderProfile.email}`} className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
-                  {leaderProfile.email}
-                </a>
-              </div>
-              <div>
-                <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Contact Number</span>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="font-mono text-slate-800 dark:text-slate-200">{leaderProfile.phone_no || "N/A"}</span>
-                  {leaderProfile.phone_no && (
-                    <a
-                      href={whatsapp(leaderProfile.phone_no)}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200"
-                    >
-                      <MessageCircle size={10} /> WhatsApp
-                    </a>
-                  )}
+              <div className="grid grid-cols-1 gap-2 text-xs">
+                <div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Full Name</span>
+                  <strong className="text-slate-900 dark:text-slate-100 text-[12.5px]">{leaderProfile.full_name}</strong>
                 </div>
-              </div>
-              <div>
-                <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Department & Semester</span>
-                <span className="text-slate-800 dark:text-slate-200 font-medium">
-                  {leaderProfile.department || "Computer Science"} · {leaderProfile.semester || "N/A"}
-                </span>
+                <div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Email Address</span>
+                  <a href={`mailto:${leaderProfile.email}`} className="text-blue-600 dark:text-blue-400 hover:underline font-medium break-all">
+                    {leaderProfile.email}
+                  </a>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Contact Number</span>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <span className="font-mono text-slate-800 dark:text-slate-200">{leaderProfile.phone_no || "N/A"}</span>
+                    {leaderProfile.phone_no && (
+                      <a
+                        href={whatsapp(leaderProfile.phone_no)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200"
+                      >
+                        <MessageCircle size={10} /> WhatsApp
+                      </a>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Department & Semester</span>
+                  <span className="text-slate-800 dark:text-slate-200 font-medium">
+                    {leaderProfile.department || "Computer Science"} · {leaderProfile.semester || "N/A"}
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* Member 1 Actions */}
-            <div className="flex flex-wrap items-center gap-2 pt-2.5 mt-2.5 border-t border-slate-200/70 dark:border-slate-800">
+            <div className="flex flex-wrap items-center gap-2 pt-2.5 mt-3 border-t border-slate-200/70 dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => onDirectEmail(leaderProfile)}
@@ -560,68 +567,70 @@ function StudentDetailModal({
                 ) : (
                   <KeyRound size={12} />
                 )}
-                {isTeam ? "Reset Leader Password" : "Reset Password"}
+                Reset Password
               </button>
             </div>
           </div>
 
           {/* Member 2 (If Team) */}
           {isTeam && (teammateProfile?.full_name || student.teammate_name) && (
-            <div className="p-3.5 rounded-lg bg-purple-50/40 dark:bg-purple-950/20 border border-purple-200/80 dark:border-purple-900/50">
-              <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-purple-200/60 dark:border-purple-900/40 text-xs">
-                <span className="font-bold text-slate-900 dark:text-slate-100">
-                  Member 2 (Teammate)
-                </span>
-                <span className="text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100 dark:bg-purple-900/60 px-1.5 py-0.5 rounded">
-                  👥 Team Member
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 text-xs">
-                <div>
-                  <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Full Name</span>
-                  <strong className="text-slate-900 dark:text-slate-100 text-[12.5px]">{teammateProfile?.full_name || student.teammate_name}</strong>
-                </div>
-                <div>
-                  <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Email Address</span>
-                  <a href={`mailto:${teammateProfile?.email || student.teammate_email}`} className="text-blue-600 dark:text-blue-400 hover:underline font-medium">
-                    {teammateProfile?.email || student.teammate_email || "N/A"}
-                  </a>
-                </div>
-                <div>
-                  <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Contact Number</span>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <span className="font-mono text-slate-800 dark:text-slate-200">{teammateProfile?.phone_no || student.teammate_phone || "N/A"}</span>
-                    {(teammateProfile?.phone_no || student.teammate_phone) && (
-                      <a
-                        href={whatsapp(teammateProfile?.phone_no || student.teammate_phone!)}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200"
-                      >
-                        <MessageCircle size={10} /> WhatsApp
-                      </a>
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-[10.5px] text-slate-500 dark:text-slate-400 block">Department & Semester</span>
-                  <span className="text-slate-800 dark:text-slate-200 font-medium">
-                    {teammateProfile?.department || student.teammate_department || "Computer Science"} · {teammateProfile?.semester || student.teammate_semester || "N/A"}
+            <div className="p-3.5 rounded-lg bg-slate-50 dark:bg-[#0c1424] border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between pb-1.5 mb-2 border-b border-slate-200/60 dark:border-slate-800 text-xs">
+                  <span className="font-bold text-slate-900 dark:text-slate-100">
+                    Member 2 (Partner)
                   </span>
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-700 dark:text-purple-300 bg-purple-100/70 dark:bg-purple-950 px-2 py-0.5 rounded border border-purple-200 dark:border-purple-900">
+                    <Users size={10} /> Partner
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 gap-2 text-xs">
+                  <div>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Full Name</span>
+                    <strong className="text-slate-900 dark:text-slate-100 text-[12.5px]">{teammateProfile?.full_name || student.teammate_name}</strong>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Email Address</span>
+                    <a href={`mailto:${teammateProfile?.email || student.teammate_email}`} className="text-blue-600 dark:text-blue-400 hover:underline font-medium break-all">
+                      {teammateProfile?.email || student.teammate_email || "N/A"}
+                    </a>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Contact Number</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="font-mono text-slate-800 dark:text-slate-200">{teammateProfile?.phone_no || student.teammate_phone || "N/A"}</span>
+                      {(teammateProfile?.phone_no || student.teammate_phone) && (
+                        <a
+                          href={whatsapp(teammateProfile?.phone_no || student.teammate_phone!)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-200"
+                        >
+                          <MessageCircle size={10} /> WhatsApp
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block uppercase font-medium">Department & Semester</span>
+                    <span className="text-slate-800 dark:text-slate-200 font-medium">
+                      {teammateProfile?.department || student.teammate_department || "Computer Science"} · {teammateProfile?.semester || student.teammate_semester || "N/A"}
+                    </span>
+                  </div>
                 </div>
               </div>
 
               {/* Member 2 Actions */}
               {teammateProfile && (
-                <div className="flex flex-wrap items-center gap-2 pt-2.5 mt-2.5 border-t border-purple-200/70 dark:border-purple-900/40">
+                <div className="flex flex-wrap items-center gap-2 pt-2.5 mt-3 border-t border-slate-200/70 dark:border-slate-800">
                   <button
                     type="button"
                     onClick={() => onDirectEmail(teammateProfile)}
                     className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[11px] font-semibold bg-white dark:bg-slate-800 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-900 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors cursor-pointer"
                     title={`Send direct email to ${teammateProfile.full_name} (${teammateProfile.email})`}
                   >
-                    <Mail size={12} /> Email Teammate
+                    <Mail size={12} /> Email Partner
                   </button>
                   <button
                     type="button"
@@ -635,7 +644,7 @@ function StudentDetailModal({
                     ) : (
                       <KeyRound size={12} />
                     )}
-                    Reset Teammate Password
+                    Reset Password
                   </button>
                 </div>
               )}
@@ -1115,8 +1124,8 @@ export function StudentsPage() {
         >
           {[
             { key: "all", label: "All Registrations", count: unifiedStudents.length },
-            { key: "team", label: "Teams (👥)", count: unifiedStudents.filter((s) => s.participation_type === "team").length },
-            { key: "individual", label: "Individual (👤)", count: unifiedStudents.filter((s) => s.participation_type !== "team").length },
+            { key: "team", label: "Teams", count: unifiedStudents.filter((s) => s.participation_type === "team").length },
+            { key: "individual", label: "Individual", count: unifiedStudents.filter((s) => s.participation_type !== "team").length },
             { key: "pending", label: "Pending Verification", count: unifiedStudents.filter((s) => s.status === "pending").length },
             { key: "approved", label: "Active / Approved", count: unifiedStudents.filter((s) => s.status === "approved").length },
             { key: "rejected", label: "Rejected", count: unifiedStudents.filter((s) => s.status === "rejected").length },
@@ -1318,23 +1327,23 @@ export function StudentsPage() {
                             {s.participation_type === "team" ? (s.team_name || s.full_name) : s.full_name}
                           </strong>
                           {s.participation_type === "team" ? (
-                            <span style={{ fontSize: "10px", fontWeight: 700, padding: "1px 6px", borderRadius: "4px", backgroundColor: "#dbeafe", color: "#1e40af" }}>
-                              👥 Team (2 Members)
+                            <span className="inline-flex items-center gap-1" style={{ fontSize: "10px", fontWeight: 700, padding: "1px 6px", borderRadius: "4px", backgroundColor: "#dbeafe", color: "#1e40af" }}>
+                              <Users size={11} /> Team (2 Members)
                             </span>
                           ) : (
-                            <span style={{ fontSize: "10px", fontWeight: 600, padding: "1px 6px", borderRadius: "4px", backgroundColor: "#f1f5f9", color: "#475569" }}>
-                              👤 Solo
+                            <span className="inline-flex items-center gap-1" style={{ fontSize: "10px", fontWeight: 600, padding: "1px 6px", borderRadius: "4px", backgroundColor: "#f1f5f9", color: "#475569" }}>
+                              <User size={11} /> Individual
                             </span>
                           )}
                         </div>
                         {s.participation_type === "team" ? (
-                          <div style={{ fontSize: "11px", color: "#64748b", marginTop: "2px", lineHeight: "1.3" }}>
+                          <div style={{ fontSize: "11px", color: "#64748b", marginTop: "3px", lineHeight: "1.3" }}>
                             <div>
-                              <span className="font-semibold text-slate-700 dark:text-slate-300">👑 Leader:</span> {s.full_name} <span className="text-slate-400">({s.email})</span>
+                              <span className="font-semibold text-slate-700 dark:text-slate-300">Leader:</span> {s.full_name} <span className="text-slate-400">({s.email})</span>
                             </div>
                             {s.teammate_name && (
                               <div>
-                                <span className="font-semibold text-slate-700 dark:text-slate-300">👥 Teammate:</span> {s.teammate_name} <span className="text-slate-400">{s.teammate_email ? `(${s.teammate_email})` : ""}</span>
+                                <span className="font-semibold text-slate-700 dark:text-slate-300">Partner:</span> {s.teammate_name} <span className="text-slate-400">{s.teammate_email ? `(${s.teammate_email})` : ""}</span>
                               </div>
                             )}
                           </div>
@@ -1440,177 +1449,260 @@ export function StudentsPage() {
                   </div>
 
                   <div>
-                    <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
-                      {/* View Full Details Button */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedStudent(s);
-                        }}
-                        title={`View complete details for ${s.full_name}`}
-                        className="students-action-btn"
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "6px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          cursor: "pointer",
-                          flexShrink: 0,
-                          color: "#475569",
-                        }}
-                      >
-                        <Eye size={13} />
-                      </button>
+                    {s.participation_type === "team" ? (
+                      /* Dedicated Team Row Actions: Minimal, Clean, Unambiguous */
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
+                        {/* Manage Team View Trigger */}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedStudent(s);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950 dark:hover:bg-blue-900/60 dark:text-blue-300 border border-blue-200 dark:border-blue-900 transition-colors cursor-pointer"
+                          title={`Manage Team ${s.team_name || s.full_name}`}
+                        >
+                          <Users size={13} />
+                          <span>Manage Team</span>
+                        </button>
 
-                      {/* WhatsApp Circular Button */}
-                      {s.phone_no && (
-                        <a
-                          href={whatsapp(s.phone_no)}
-                          target="_blank"
-                          rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          title={`Chat on WhatsApp (${s.phone_no})`}
+                        {/* Team Payment Receipt Button */}
+                        <button
+                          type="button"
+                          className="students-action-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setReceiptModal({
+                              isOpen: true,
+                              studentName: s.team_name || s.full_name,
+                              receiptUrl: s.payment_receipt_url
+                                ? `/api/admin/receipt?id=${encodeURIComponent(s.id)}`
+                                : null,
+                            });
+                          }}
+                          title={s.payment_receipt_url ? "View team payment receipt" : "No receipt uploaded"}
                           style={{
                             width: "28px",
                             height: "28px",
                             borderRadius: "6px",
-                            background: "#25D366",
-                            color: "#ffffff",
                             display: "inline-flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            textDecoration: "none",
-                            boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
                             flexShrink: 0,
+                            padding: 0,
+                            cursor: "pointer",
                           }}
                         >
-                          <svg style={{ width: "14px", height: "14px", fill: "currentColor" }} viewBox="0 0 24 24">
-                            <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
-                          </svg>
-                        </a>
-                      )}
+                          <FileText size={13} />
+                        </button>
 
-                      {/* Direct Email Button */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDirectStudent(s);
-                          setDirectSubject("Important Notice regarding your VSpark Participation");
-                          setDirectMessage("");
-                        }}
-                        title={`Send direct email to ${s.full_name} (${s.email})`}
-                        className="students-action-btn"
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "6px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          cursor: "pointer",
-                          flexShrink: 0,
-                          color: "#2563eb",
-                        }}
-                      >
-                        <Mail size={13} />
-                      </button>
-
-                      {/* Reset Password Button */}
-                      <button
-                        type="button"
-                        disabled={busy === `reset-${s.id}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSendPasswordReset(s);
-                        }}
-                        title={`Send password reset email to ${s.email}`}
-                        className="students-action-btn"
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "6px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          cursor: "pointer",
-                          flexShrink: 0,
-                          color: "#d97706",
-                        }}
-                      >
-                        {busy === `reset-${s.id}` ? (
-                          <RefreshCw size={12} className="animate-spin text-amber-600" />
-                        ) : (
-                          <KeyRound size={13} />
+                        {/* Team Approval Controls */}
+                        {s.status !== "approved" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy === s.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              review(s.id, "approved");
+                            }}
+                            title="Approve Team (Both Members)"
+                            style={{ padding: "4px 8px", fontSize: "11px", height: "28px", borderRadius: "6px" }}
+                          >
+                            <Check size={13} />
+                            Approve
+                          </Button>
                         )}
-                      </button>
-
-                      {/* Payment Receipt Button */}
-                      <button
-                        type="button"
-                        className="students-action-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setReceiptModal({
-                            isOpen: true,
-                            studentName: s.full_name,
-                            receiptUrl: s.payment_receipt_url
-                              ? `/api/admin/receipt?id=${encodeURIComponent(s.id)}`
-                              : null,
-                          });
-                        }}
-                        title={s.payment_receipt_url ? "View student payment receipt" : "No receipt uploaded"}
-                        style={{
-                          width: "28px",
-                          height: "28px",
-                          borderRadius: "6px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          flexShrink: 0,
-                          padding: 0,
-                          cursor: "pointer",
-                        }}
-                      >
-                        <FileText size={13} />
-                      </button>
-
-                      {/* Approval Controls */}
-                      {s.status !== "approved" && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={busy === s.id}
+                        {s.status !== "rejected" && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            disabled={busy === s.id}
+                            aria-label={`Reject Team ${s.team_name || s.full_name}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              review(s.id, "rejected");
+                            }}
+                            style={{ width: "28px", height: "28px", borderRadius: "6px", color: "#dc2626" }}
+                          >
+                            <X size={14} />
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      /* Single Student Row Actions: Keep Exactly As Existing */
+                      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "6px" }}>
+                        {/* View Full Details Button */}
+                        <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            review(s.id, "approved");
+                            setSelectedStudent(s);
                           }}
-                          title={s.participation_type === "team" ? "Approve Team (Both Members)" : "Approve Student"}
-                          style={{ padding: "4px 8px", fontSize: "11px", height: "28px", borderRadius: "6px" }}
+                          title={`View complete details for ${s.full_name}`}
+                          className="students-action-btn"
+                          style={{
+                            width: "28px",
+                            height: "28px",
+                            borderRadius: "6px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            flexShrink: 0,
+                            color: "#475569",
+                          }}
                         >
-                          <Check size={13} />
-                          {s.participation_type === "team" ? "Approve Team" : "Approve"}
-                        </Button>
-                      )}
-                      {s.status !== "rejected" && (
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          disabled={busy === s.id}
-                          aria-label={`Reject ${s.full_name}`}
+                          <Eye size={13} />
+                        </button>
+
+                        {/* WhatsApp Circular Button */}
+                        {s.phone_no && (
+                          <a
+                            href={whatsapp(s.phone_no)}
+                            target="_blank"
+                            rel="noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            title={`Chat on WhatsApp (${s.phone_no})`}
+                            style={{
+                              width: "28px",
+                              height: "28px",
+                              borderRadius: "6px",
+                              background: "#25D366",
+                              color: "#ffffff",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              textDecoration: "none",
+                              boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                              flexShrink: 0,
+                            }}
+                          >
+                            <svg style={{ width: "14px", height: "14px", fill: "currentColor" }} viewBox="0 0 24 24">
+                              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z" />
+                            </svg>
+                          </a>
+                        )}
+
+                        {/* Direct Email Button */}
+                        <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
-                            review(s.id, "rejected");
+                            setDirectStudent(s);
+                            setDirectSubject("Important Notice regarding your VSpark Participation");
+                            setDirectMessage("");
                           }}
-                          style={{ width: "28px", height: "28px", borderRadius: "6px" }}
+                          title={`Send direct email to ${s.full_name} (${s.email})`}
+                          className="students-action-btn"
+                          style={{
+                            width: "28px",
+                            height: "28px",
+                            borderRadius: "6px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            flexShrink: 0,
+                            color: "#2563eb",
+                          }}
                         >
-                          <X size={14} />
-                        </Button>
-                      )}
-                    </div>
+                          <Mail size={13} />
+                        </button>
+
+                        {/* Reset Password Button */}
+                        <button
+                          type="button"
+                          disabled={busy === `reset-${s.id}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSendPasswordReset(s);
+                          }}
+                          title={`Send password reset email to ${s.email}`}
+                          className="students-action-btn"
+                          style={{
+                            width: "28px",
+                            height: "28px",
+                            borderRadius: "6px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer",
+                            flexShrink: 0,
+                            color: "#d97706",
+                          }}
+                        >
+                          {busy === `reset-${s.id}` ? (
+                            <RefreshCw size={12} className="animate-spin text-amber-600" />
+                          ) : (
+                            <KeyRound size={13} />
+                          )}
+                        </button>
+
+                        {/* Payment Receipt Button */}
+                        <button
+                          type="button"
+                          className="students-action-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setReceiptModal({
+                              isOpen: true,
+                              studentName: s.full_name,
+                              receiptUrl: s.payment_receipt_url
+                                ? `/api/admin/receipt?id=${encodeURIComponent(s.id)}`
+                                : null,
+                            });
+                          }}
+                          title={s.payment_receipt_url ? "View student payment receipt" : "No receipt uploaded"}
+                          style={{
+                            width: "28px",
+                            height: "28px",
+                            borderRadius: "6px",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                            padding: 0,
+                            cursor: "pointer",
+                          }}
+                        >
+                          <FileText size={13} />
+                        </button>
+
+                        {/* Approval Controls */}
+                        {s.status !== "approved" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy === s.id}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              review(s.id, "approved");
+                            }}
+                            title="Approve Student"
+                            style={{ padding: "4px 8px", fontSize: "11px", height: "28px", borderRadius: "6px" }}
+                          >
+                            <Check size={13} />
+                            Approve
+                          </Button>
+                        )}
+                        {s.status !== "rejected" && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            disabled={busy === s.id}
+                            aria-label={`Reject ${s.full_name}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              review(s.id, "rejected");
+                            }}
+                            style={{ width: "28px", height: "28px", borderRadius: "6px" }}
+                          >
+                            <X size={14} />
+                          </Button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -2167,8 +2259,8 @@ export function EvaluationsPage() {
                         {isTeamSubmission ? (
                           <div>
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
-                                👥 Team
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+                                <Users size={11} /> Team
                               </span>
                               <strong className="text-sm font-bold text-slate-900 dark:text-slate-100">
                                 {student?.team_name || "Team Project"}
@@ -2281,7 +2373,15 @@ export function EvaluationsPage() {
                 <div className="card-heading">
                   <div>
                     <div className="eyebrow flex items-center gap-1.5">
-                      {isTeam ? "👥 TEAM EVALUATION" : "👤 PARTICIPANT EVALUATION"}
+                      {isTeam ? (
+                        <span className="inline-flex items-center gap-1 font-bold text-blue-600 dark:text-blue-400">
+                          <Users size={12} /> TEAM EVALUATION
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 font-bold text-slate-600 dark:text-slate-400">
+                          <User size={12} /> PARTICIPANT EVALUATION
+                        </span>
+                      )}
                     </div>
                     <h2 id="evaluation-title" style={{ fontSize: "20px", fontWeight: 800 }}>
                       {isTeam ? student?.team_name : selected.student_name}
@@ -2395,24 +2495,24 @@ export function EvaluationsPage() {
               <button
                 type="button"
                 onClick={() => setScoreMode("direct")}
-                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                   scoreMode === "direct"
                     ? "bg-white dark:bg-[#101a2b] text-blue-600 dark:text-blue-400 shadow-xs"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                 }`}
               >
-                ⚡ Direct Score (Out of 100)
+                <SlidersHorizontal size={13} /> Direct Score (Out of 100)
               </button>
               <button
                 type="button"
                 onClick={() => setScoreMode("rubric")}
-                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all cursor-pointer inline-flex items-center gap-1.5 ${
                   scoreMode === "rubric"
                     ? "bg-white dark:bg-[#101a2b] text-blue-600 dark:text-blue-400 shadow-xs"
                     : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
                 }`}
               >
-                📋 Detailed 9-Category Rubric
+                <FileSpreadsheet size={13} /> Detailed 9-Category Rubric
               </button>
             </div>
 
@@ -3061,14 +3161,16 @@ export function SettingsPage() {
                   </div>
                 </div>
 
-                <p className="text-xs text-slate-500 dark:text-slate-400 m-0 leading-relaxed">
+                <p className="text-xs text-slate-500 dark:text-slate-400 m-0 leading-relaxed flex items-start gap-1.5">
                   {data.services?.drive_mode === "personal" ? (
                     <>
-                      ✅ <strong>OAuth 2.0 Active:</strong> Student submissions and source code files are automatically stored using your 15 GB personal Google Drive quota.
+                      <CheckCircle size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+                      <span><strong>OAuth 2.0 Active:</strong> Student submissions and source code files are automatically stored using your 15 GB personal Google Drive quota.</span>
                     </>
                   ) : (
                     <>
-                      ⚠️ <strong>OAuth Required:</strong> Google prohibits Service Accounts from uploading files into personal Google Drives (0 bytes quota). Authorize your Google account with OAuth 2.0 so student folders and all project code files upload directly into your Google Drive.
+                      <AlertCircle size={14} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+                      <span><strong>OAuth Required:</strong> Google prohibits Service Accounts from uploading files into personal Google Drives (0 bytes quota). Authorize your Google account with OAuth 2.0 so student folders and all project code files upload directly into your Google Drive.</span>
                     </>
                   )}
                 </p>
