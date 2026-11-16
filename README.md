@@ -17,10 +17,7 @@ A comprehensive, full-stack competition management, student workspace, and facul
 > **Video Walkthrough Placeholder:** A video demonstration showcasing participant registration, team formation, faculty verification, live 120-minute workspace countdown, file packaging, dual-mode evaluation scoring, and live leaderboard podium rankings.
 
 <!-- VIDEO_DEMO_START -->
-[![VSpark Competition Platform Walkthrough Video](https://img.shields.io/badge/Demo_Video-Click_to_Watch_Walkthrough-2563eb?style=for-the-badge&logo=youtube&logoColor=white)](https://your-video-link-here.com)
-
-*Video Link Placeholder: Replace `https://your-video-link-here.com` with your YouTube, Loom, or Google Drive demonstration recording.*
-<!-- VIDEO_DEMO_END -->
+https://github.com/user-attachments/assets/60384d8c-8cfd-4ec5-9d62-03163c2f2d0b
 
 ---
 
